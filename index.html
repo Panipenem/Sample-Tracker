@@ -1,0 +1,2854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Local Sample Manager (SQLite)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; }
+    header { background: #1f2937; color: white; padding: 12px 16px; }
+    main { padding: 16px; }
+    h1 { margin: 0; font-size: 20px; }
+    h2 { margin-top: 24px; font-size: 18px; }
+    .section { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+    label { display: block; margin-top: 8px; font-size: 13px; }
+    input, select, textarea { width: 100%; box-sizing: border-box; padding: 4px 6px; font-size: 13px; margin-top: 2px; }
+    /* 复选框 / 单选按钮不要占满整行宽度，避免把文字挤到下一行 */
+
+    #wizard-backdrop input[type="checkbox"],
+    #wizard-backdrop input[type="radio"] {
+      width: auto;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    textarea { resize: vertical; min-height: 40px; }
+    button { margin-top: 8px; margin-right: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+    c c c c c c
+    th, td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
+    th { background-color: #f3f4f6; }
+    .flex { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .flex > * { margin: 0; }
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      font-size: 11px;
+      margin-right: 4px;
+    }
+    .tag-available {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+    .tag-low {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .box-group {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin: 10px 0;
+      background: #f3f4f6;
+    }
+    .box-group-header {
+      font-weight: 700;
+      font-size: 15px;
+      color: #111827;
+      margin-bottom: 6px;
+    }
+    .box-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .box-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 6px 8px;
+      margin: 4px 0;
+      background: #f9fafb;
+      flex: 0 1 calc(33.333% - 8px);
+      min-width: 240px;
+      box-sizing: border-box;
+    }
+    .box-sample-list {
+      margin: 6px 0 0 0;
+      padding-left: 16px;
+      font-size: 11px;
+    }
+    .box-sample-list li {
+      line-height: 1.3;
+      margin-bottom: 2px;
+    }
+    .sample-main {
+      display: inline-block;
+      min-width: 110px;
+      font-weight: 500;
+    }
+    .sample-meta {
+      display: inline-block;
+      margin-left: 6px;
+      color: #4b5563;
+    }
+    .sample-status {
+      margin-left: 6px;
+    }
+    .sample-toggle {
+      cursor: pointer;
+      font-size: 11px;
+      margin-left: auto;
+      color: #2563eb;
+      border: none;
+      background: transparent;
+      padding: 0;
+    }
+    .small { font-size: 11px; color: #6b7280; }
+        .tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 8px;
+      margin-top: 8px;
+    }
+    .tab-button {
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid #e5e7eb;
+      border-bottom: none;
+      background: #f9fafb;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+    }
+    .tab-button.active {
+      background: white;
+      border-bottom: 1px solid white;
+      font-weight: 600;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.35);
+      z-index: 1000;
+    }
+
+    .wizard-modal {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      max-width: 650px;
+      width: 95%;
+      max-height: 520px;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+
+    .wizard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .wizard-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .wizard-close-btn {
+      border: none;
+      background: transparent;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 4px;
+      cursor: pointer;
+    }
+
+    .wizard-step {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wizard-step-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .wizard-step-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    .wizard-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 8px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 8px;
+    }
+
+    .wizard-type-list label {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 12px;
+      margin-top: 4px;
+      font-size: 13px;
+    }
+
+    .wizard-type-block {
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+    }
+
+    .wizard-type-block-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .wizard-type-block-options label {
+      display: block;
+      font-size: 13px;
+      margin: 2px 0;
+    }
+
+    /* 确保带 hidden 的遮罩、步骤真正隐藏 */
+    .modal-backdrop.hidden {
+      display: none !important;
+    }
+
+    .wizard-step.hidden {
+      display: none !important;
+    }
+
+    /* 弹窗高度改成相对视口，内部 body 负责滚动 */
+    .wizard-modal {
+      max-height: 80vh;
+      overflow: hidden;
+    }
+
+    .wizard-step-body {
+    text-align: left !important;
+    }
+
+    .wizard-naming-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6px;
+      margin: 4px 0;
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .wizard-naming-row input[type="radio"] {
+      margin: 0;
+    }
+
+    .wizard-naming-row span {
+      flex: 0 0 auto;
+    }
+
+    .wizard-naming-row input[type="text"] {
+      flex: 1 1 auto;
+    }
+
+    #wizard-summary {
+        white-space: pre-line;
+        line-height: 1.5;
+    }
+
+    .wizard-naming-option {
+    display: flex !important;       /* 让圆点、文字、输入框都按顺序排列 */
+    flex-direction: row !important;
+    align-items: center !important; /* 垂直居中（不会漂移） */
+    gap: 8px !important;            /* 圆点与文字的间距 */
+    margin: 6px 0 !important;
+    }
+
+    .wizard-naming-option input[type="radio"] {
+    margin: 0 !important;
+    }
+
+    .wizard-naming-option span {
+      margin-right: 6px;
+    }
+
+    .wizard-naming-option input[type="text"] {
+    flex: 1 1 auto !important;      /* 输入框自动拉伸 */
+    min-width: 200px;
+    }
+
+    /***** Clean & Balanced Sample List Table Style *****/
+
+    /* 整个 sample list table 使用统一边框 + 紧凑但不挤的布局 */
+    #samples-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;        /* 阻止长文本撑宽整列，让列更均匀 */
+    font-size: 12px;
+    }
+
+    /* Archived 也一样 */
+    #archived-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 12px;
+    }
+
+    /* 基础单元格线条：柔和的浅黑色细线 */
+    #samples-table th, #samples-table td,
+    #archived-table th, #archived-table td {
+    border: 1px solid #d1d5db;   /* 类似 Tailwind border-gray-300，非常干净 */
+    padding: 6px 8px;            /* 让每列之间更宽松一点 */
+    text-align: left;
+    word-wrap: break-word;
+    }
+
+    /* 表头浅灰背景 */
+    #samples-table th,
+    #archived-table th {
+    background-color: #f3f4f6;
+    font-weight: 600;
+    }
+
+    /* 第一列复选框列：固定宽度并居中，不再乱飘 */
+    #samples-table th:first-child,
+    #samples-table td:first-child,
+    #archived-table th:first-child,
+    #archived-table td:first-child {
+    width: 32px;
+    text-align: center;
+    }
+
+    /* 复选框本身居中显示 */
+    #samples-table td:first-child input[type="checkbox"],
+    #archived-table td:first-child input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    vertical-align: middle;
+    }
+
+    /* Storage 列避免撑宽整表 —— 自动换行、有限制的最大宽度 */
+    #samples-table th:nth-child(12),
+    #samples-table td:nth-child(12),
+    #archived-table th:nth-child(12),
+    #archived-table td:nth-child(12) {
+    max-width: 200px;
+    white-space: normal;
+    word-break: break-word;
+    }
+
+    /* Date 列略窄一点 */
+    #samples-table th:nth-child(3),
+    #samples-table td:nth-child(3),
+    #archived-table th:nth-child(3),
+    #archived-table td:nth-child(3) {
+        width: 80px;
+    }
+
+    /* Exp label 再窄一点 */
+    #samples-table th:nth-child(4),
+    #samples-table td:nth-child(4),
+    #archived-table th:nth-child(4),
+    #archived-table td:nth-child(4) {
+        width: 70px;
+    }
+    
+    /* Actions 列：按钮不换行 */
+    #samples-table th:nth-child(12),
+    #samples-table td:nth-child(12),
+    #archived-table th:nth-child(12),
+    #archived-table td:nth-child(12) {
+        width: 70px;
+    }
+
+    /* 修复 Actions 列按钮溢出表格的问题 */
+    #samples-table th:last-child,
+    #samples-table td:last-child,
+    #archived-table th:last-child,
+    #archived-table td:last-child {
+    white-space: nowrap;
+    width: 160px;        /* 给最后一列一个硬宽度，确保能容纳三颗按钮 */
+    max-width: 160px;
+    }
+
+    /* 紧凑化按钮，让三颗按钮稳稳放在一行 */
+    #samples-table td:last-child button,
+    #archived-table td:last-child button {
+    padding: 3px 6px;
+    font-size: 11px;
+    margin: 0 2px;
+    display: inline-block;
+    }
+
+    /* 行条纹效果 */
+    #samples-table tbody tr:nth-child(odd),
+    #archived-table tbody tr:nth-child(odd) {
+        background-color: #f9fafb;
+    }
+
+    #samples-table tbody tr:nth-child(even),
+    #archived-table tbody tr:nth-child(even) {
+        background-color: #ffffff;
+    }
+
+    /* hover 高亮 */
+    #samples-table tbody tr:hover,
+    #archived-table tbody tr:hover {
+        background-color: #e5f0ff;
+    }
+
+    /* 选中行高亮（checkbox 勾选时我们会在 JS 中加上 row-selected 类） */
+    tr.row-selected {
+        background-color: #dbeafe !important; /* 更深一点的浅蓝色 */
+    }
+
+      /* 表格中的按钮去掉额外的上边距，防止三颗按钮高度不齐、占用太多垂直空间 */
+    #samples-table td button,
+    #archived-table td button {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+
+
+  </style>
+</head>
+<body>
+<header>
+  <h1>Local Sample Manager (SQLite, Offline)</h1>
+  <div style="font-size:12px; margin-top:4px;">All data stays in your browser until you export a .sqlite file.</div>
+</header>
+
+<main>
+  <!-- Database controls -->
+  <div class="section">
+    <h2>Database</h2>
+    <div class="flex">
+      <button id="btn-new-db">New in-memory DB</button>
+
+      <label style="width:auto;">
+        Load .sqlite file:
+        <input type="file" id="file-input" accept=".sqlite,.db,.sqlite3" style="width:auto;">
+      </label>
+
+      <button id="btn-export-db">Download current DB (.sqlite)</button>
+      <!--手动备份--> 
+      <button id="btn-backup-db">Backup DB</button>
+    </div>
+
+        <!-- 新增：Excel 导入控件 -->
+    <div class="flex" style="margin-top:8px;">
+      <label style="width:auto;">
+        Import samples (.xlsx):
+        <input type="file" id="import-file" accept=".xlsx,.xls" style="width:auto;">
+      </label>
+      <button id="btn-import-samples">Import samples</button>
+    </div>
+
+    <div id="db-status" class="small" style="margin-top:6px;color:#10b981;">
+      DB not initialized.
+    </div>
+  </div>
+
+  <!-- Tabs for views -->
+  <div class="tabs">
+    <button class="tab-button active" data-tab="form">Data Entry</button>
+    <button class="tab-button" data-tab="samples">Sample List</button>
+    <button class="tab-button" data-tab="archived">Archived</button>
+    <button class="tab-button" data-tab="boxes">Box View</button>
+  </div>
+
+  <!-- Sample form -->
+  <div class="section" id="section-form">
+    <h2>Add / Edit Sample</h2>
+    <form id="sample-form">
+      <div class="flex">
+        <div style="flex:1; min-width:220px;">
+            <label>Sample ID</label>
+            <div class="flex">
+                <input
+                type="text"
+                id="sample_id"
+                required
+                style="flex:1; min-width:140px;"
+                placeholder="可手动填，或用 Auto 生成"
+            >
+            <button type="button" id="btn-generate-id">Auto</button>
+            </div>
+        </div>
+        <div style="flex:1; min-width:140px;">
+            <label>Date (YYYYMMDD)
+                <input
+                type="text"
+                id="date"
+                placeholder="例如：20250213"
+                maxlength="8"
+            >
+            </label>
+        </div>
+        <div style="flex:1; min-width:120px;">
+            <label>Experiment label
+                <input
+                type="text"
+                id="experiment_label"
+                placeholder="例如：1# / A1 / 2R"
+            >
+            </label>
+        </div>
+        <div style="flex:1; min-width:180px;">
+            <label>Species (Genotype)
+                <input type="text" id="species_genotype" placeholder="e.g. C57BL/6 WT, Rorc-GFP">
+            </label>
+        </div>
+        </div>
+
+      <div class="flex">
+        <div style="flex:1; min-width:160px;">
+          <label>Model
+            <input type="text" id="model" placeholder="e.g. Sham, CLP D3, DSS D7">
+          </label>
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <label>Tissue
+            <input type="text" id="tissue" placeholder="e.g. Ileum, Colon, MLN">
+          </label>
+        </div>
+        <div style="flex:1; min-width:160px;">
+            <label>Sample Type
+                <select id="sample_type">
+                    <option value="">(select)</option>
+                    <option value="Tissue">Tissue</option>
+                    <option value="Cell pellet">Cell pellet</option>
+                    <option value="RNA">RNA</option>
+                    <option value="DNA">DNA</option>
+                    <option value="Protein">Protein</option>
+                    <option value="Serum">Serum</option>
+                    <option value="Plasma">Plasma</option>
+                    <option value="PBMC">PBMC</option>
+                    <option value="Whole blood">Whole blood</option>
+                    <option value="Supernatant">Supernatant</option>
+                    <option value="Other">Other</option>
+                </select>
+            </label>
+            </div>
+      </div>
+
+      <label>Processing (current sample)
+        <input type="text" id="processing" placeholder="e.g. +TRIzol, +Lysis buffer">
+      </label>
+
+      <div class="flex">
+        <div style="flex:1; min-width:160px;">
+          <label>Parent Sample ID
+            <input type="text" id="parent_sample_id" placeholder="optional">
+          </label>
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <label>Amount (for quantitative samples)
+            <input type="text" id="amount" placeholder="e.g. 1.2 μg RNA in 20 μL">
+          </label>
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <label>Project
+            <input type="text" id="project" placeholder="e.g. Sepsis_Treg_multiomics">
+          </label>
+        </div>
+      </div>
+
+      <label>Notes
+        <textarea id="notes" placeholder="Any details like intestinal segment, condition, etc."></textarea>
+      </label>
+
+      <h3 style="margin-top:16px; font-size:14px;">Storage</h3>
+      <div class="flex">
+        <div style="flex:1; min-width:120px;">
+          <label>Storage Temperature
+            <input type="text" id="storage_temperature" placeholder="-80 / -40 / -20 / LN2">
+          </label>
+        </div>
+        <div style="flex:1; min-width:120px;">
+          <label>Freezer No.
+            <input type="text" id="freezer_no" placeholder="e.g. F1, F2, LN2-1">
+          </label>
+        </div>
+        <div style="flex:1; min-width:120px;">
+          <label>Rack
+            <input type="text" id="rack" placeholder="e.g. A, B, Shelf-2">
+          </label>
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <label>Box Label
+            <input type="text" id="box_label" placeholder="e.g. RNA-Blue, Box-B2">
+          </label>
+        </div>
+      </div>
+
+      <div class="flex">
+        <div style="flex:1; min-width:120px;">
+          <label>Status
+            <select id="status">
+              <option value="available">available</option>
+              <option value="low">low volume</option>
+              <option value="retired">retired</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <input type="hidden" id="internal_sample_row_id">
+
+      <button type="submit">Save Sample</button>
+      <button type="button" id="btn-reset-form">Reset</button>
+    </form>
+    <div class="small" style="margin-top:6px;">
+      Tip: Use suffix in Sample ID (e.g. -A, -B, -C) to represent aliquots as separate records.
+    </div>
+  </div>
+
+  <!-- Sample list -->
+  <div class="section" id="section-samples">
+    <h2>Sample List (active)</h2>
+    <div class="flex">
+      <label>Search (Sample ID / tissue / model / project)
+        <input type="text" id="search-input" placeholder="Type to filter...">
+      </label>
+      <label>Status filter
+        <select id="status-filter">
+          <option value="">(all)</option>
+          <option value="available">available</option>
+          <option value="low">low</option>
+        </select>
+      </label>
+      <label>Label date (YYYYMMDD)
+        <input type="text" id="label-export-date" placeholder="如：20250213" maxlength="8">
+      </label>
+    </div>
+    <div class="flex" style="margin-top:6px;">
+      <div>
+        <button id="btn-export-xlsx">Export all (.xlsx)</button>
+        <button id="btn-export-labels-xlsx">Export labels (.xlsx)</button>
+        <button id="btn-open-secondary-wizard">Secondary wizard</button>
+      </div>
+      <div style="margin-left:auto;">
+        <button id="btn-archive-selected">Archive selected</button>
+        <button id="btn-delete-selected" style="background:#b40000;color:#fff;">Delete selected</button>
+      </div>
+    </div>
+    <table id="samples-table">
+      <thead>
+      <tr>
+        <th><input type="checkbox" id="select-all-samples"></th>
+        <th>Sample ID</th>
+        <th>Date</th>
+        <th>Exp label</th>
+        <th>Species / Genotype</th>
+        <th>Model</th>
+        <th>Tissue</th>
+        <th>Type</th>
+        <th>Processing</th>
+        <th>notes</th>
+        <th>Project</th>
+        <th>Status</th>
+        <th>Storage</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+    <!-- Archived samples -->
+  <div class="section" id="section-archived">
+    <h2>Archived / Consumed samples</h2>
+    <div class="flex">
+      <label>Search (Sample ID / tissue / model / project)
+        <input type="text" id="archived-search-input" placeholder="Type to filter archived samples...">
+      </label>
+    </div>
+    <div class="flex" style="margin-top:6px;">
+      <div style="margin-left:auto;">
+        <button id="btn-unarchive-selected">Unarchive selected</button>
+        <button id="btn-delete-archived" style="background:#b40000;color:#fff;">Delete selected</button>
+      </div>
+    </div>
+    <table id="archived-table">
+      <thead>
+      <tr>
+        <th><input type="checkbox" id="select-all-archived"></th>
+        <th>Sample ID</th>
+        <th>Date</th>
+        <th>Exp label</th>
+        <th>Species / Genotype</th>
+        <th>Model</th>
+        <th>Tissue</th>
+        <th>Type</th>
+        <th>Processing</th>
+        <th>notes</th>
+        <th>Project</th>
+        <th>Status</th>
+        <th>Storage</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Box view -->
+  <div class="section" id="section-boxes">
+    <h2>Box View</h2>
+    <div id="boxes-container"></div>
+  </div>
+
+  <!-- Secondary Sample Wizard Modal -->
+  <div id="wizard-backdrop" class="modal-backdrop hidden">
+    <div class="wizard-modal">
+      <div class="wizard-header">
+        <div class="wizard-title">Secondary Sample Wizard</div>
+        <button type="button" id="wizard-close-btn" class="wizard-close-btn">×</button>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="wizard-step-1" class="wizard-step">
+        <div class="wizard-step-title">Step 1 · Select secondary sample types</div>
+        <div class="wizard-step-body">
+          <div class="wizard-type-list">
+            <label><input type="checkbox" class="wizard-type-checkbox" value="RNA"> RNA</label>
+            <label><input type="checkbox" class="wizard-type-checkbox" value="DNA"> DNA</label>
+            <label><input type="checkbox" class="wizard-type-checkbox" value="Protein lysate"> Protein lysate</label>
+            <label><input type="checkbox" class="wizard-type-checkbox" value="cDNA library"> cDNA library</label>
+            <label><input type="checkbox" class="wizard-type-checkbox" value="Cell suspension"> Cell suspension</label>
+          </div>
+          <div style="margin-top:8px;">
+            <label>Custom type
+              <input type="text" id="wizard-custom-type" placeholder="e.g. metabolite extract">
+            </label>
+          </div>
+          <div class="small" id="wizard-primary-count-hint" style="margin-top:4px;"></div>
+        </div>
+        <div class="wizard-footer">
+          <button type="button" id="wizard-cancel-1">Cancel</button>
+          <button type="button" id="wizard-next-1">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="wizard-step-2" class="wizard-step hidden">
+        <div class="wizard-step-title">Step 2 · Processing options</div>
+        <div id="wizard-processing-container" class="wizard-step-body">
+          <!-- filled by JS -->
+        </div>
+        <div class="wizard-footer">
+          <button type="button" id="wizard-prev-2">Back</button>
+          <button type="button" id="wizard-next-2">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="wizard-step-3" class="wizard-step hidden">
+        <div class="wizard-step-title">Step 3 · Naming rule</div>
+        <div class="wizard-step-body">
+          <label class="wizard-naming-option">
+            <input
+              type="radio"
+              name="wizard-naming-rule"
+              value="parent-type"
+              checked
+            >
+            <span>ParentID-TYPE (e.g. 20250213-001-RNA)</span>
+          </label>
+
+          <label class="wizard-naming-option">
+            <input
+              type="radio"
+              name="wizard-naming-rule"
+              value="custom"
+            >
+            <span>Custom template:</span>
+            <input
+              type="text"
+              id="wizard-custom-template"
+              placeholder="{parent}-{type}"
+            >
+          </label>
+
+          <div class="small" style="margin-top:4px;">
+            {parent} → primary sample_id；{type} → 短 type 代码（例如 RNA, Pr, cDNA）。
+          </div>
+        </div>
+        <div class="wizard-footer">
+          <button type="button" id="wizard-prev-3">Back</button>
+          <button type="button" id="wizard-next-3">Next</button>
+        </div>
+      </div>
+
+
+      <!-- Step 4 -->
+      <div id="wizard-step-4" class="wizard-step hidden">
+        <div class="wizard-step-title">Step 4 · Confirm</div>
+        <div id="wizard-summary" class="wizard-step-body small">
+          <!-- filled by JS -->
+        </div>
+        <div class="wizard-footer">
+          <button type="button" id="wizard-prev-4">Back</button>
+          <button type="button" id="wizard-generate">Generate samples</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<!-- sql.js (SQLite in WebAssembly) -->
+<script src="sql-wasm.js"></script>
+<!-- SheetJS for Excel export (you need to include xlsx.full.min.js) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+  let SQL;
+  let db = null; // SQLite database instance
+  let dbDirty = false // unsaved edit 
+
+  // ==== LocalStorage keys, 用于缓存最近的 DB ====
+  const LAST_DB_KEY = 'sampleApp.lastDbBase64';
+  const LAST_DB_NAME_KEY = 'sampleApp.lastDbName';
+
+  // ==== base64 <-> Uint8Array 工具函数 ====
+  function uint8ToBase64(u8) {
+    let binary = '';
+    for (let i = 0; i < u8.length; i++) {
+      binary += String.fromCharCode(u8[i]);
+    }
+    return btoa(binary);
+  }
+
+  function base64ToUint8(base64) {
+    const binary = atob(base64);
+    const len = binary.length;
+    const u8 = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      u8[i] = binary.charCodeAt(i);
+    }
+    return u8;
+  }
+
+  // ==== 尝试自动加载上一次缓存的 DB ====
+  function tryAutoLoadLastDb() {
+    // 仅在 sql.js 已加载、且目前还没有 db 实例时尝试
+    if (!SQL || db) return;
+
+    const base64 = localStorage.getItem(LAST_DB_KEY);
+    if (!base64) return;
+
+    try {
+      const u8 = base64ToUint8(base64);
+      db = new SQL.Database(u8);
+      initSchema();
+      refreshAllViews();
+      dbDirty = false; // 视作从“已保存状态”恢复
+
+      const name = localStorage.getItem(LAST_DB_NAME_KEY) || '(cached DB)';
+      const statusEl = document.getElementById('db-status');
+      if (statusEl) {
+        statusEl.textContent = 'Automatically loaded last DB: ' + name + ' (from browser cache)';
+      }
+      console.log('Auto-loaded last DB from localStorage:', name);
+    } catch (e) {
+      console.error('Failed to auto-load DB from localStorage', e);
+    }
+  }
+
+  // Initialize sql.js
+  initSqlJs({ locateFile: file => 'sql-wasm.wasm' }).then(SQLLib => {
+    SQL = SQLLib;
+    document.getElementById('db-status').textContent = 'sql.js loaded. Click "New in-memory DB" or load a .sqlite file.';
+    // sql.js 就绪后尝试自动加载上一次缓存的 DB
+    tryAutoLoadLastDb();
+  });
+
+  // Create new in-memory DB
+  document.getElementById('btn-new-db').addEventListener('click', () => {
+    if (!SQL) {
+      alert('sql.js not ready yet.');
+      return;
+    }
+    db = new SQL.Database();
+    dbDirty = false;
+    initSchema();
+    refreshAllViews();
+    document.getElementById('db-status').textContent = 'New in-memory DB created.';
+  });
+
+  // Load DB from file
+  document.getElementById('file-input').addEventListener('change', async (ev) => {
+    const file = ev.target.files[0];
+    if (!file || !SQL) return;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const u8 = new Uint8Array(arrayBuffer);
+
+    db = new SQL.Database(u8);
+    dbDirty = false;
+    initSchema(); // in case old DB has no schema
+    refreshAllViews();
+    document.getElementById('db-status').textContent = 'Loaded DB: ' + file.name;
+
+    // 将当前 DB 缓存到 localStorage，供下次自动加载使用
+    try {
+      const base64 = uint8ToBase64(u8);
+      localStorage.setItem(LAST_DB_KEY, base64);
+      localStorage.setItem(LAST_DB_NAME_KEY, file.name || 'db.sqlite');
+      console.log('Cached DB to localStorage:', file.name);
+    } catch (e) {
+      console.error('Failed to cache DB into localStorage', e);
+    }   
+  });
+
+  // Export DB to .sqlite
+  document.getElementById('btn-export-db').addEventListener('click', () => {
+    if (!db) {
+      alert('No database loaded.');
+      return;
+    }
+
+    const binaryArray = db.export();
+    const blob = new Blob([binaryArray], { type: 'application/x-sqlite3' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const filename = `sample_db_${ts}.sqlite`;
+
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    dbDirty = false;
+
+    // 同步更新 localStorage 缓存：让“自动加载”版本等于刚刚导出的版本
+    try {
+      const base64 = uint8ToBase64(binaryArray);
+      localStorage.setItem(LAST_DB_KEY, base64);
+      // 如果之前有记录过文件名就沿用，没有就用这次的默认名
+      const oldName = localStorage.getItem(LAST_DB_NAME_KEY);
+      localStorage.setItem(LAST_DB_NAME_KEY, oldName || filename);
+      console.log('Updated cached DB after export:', oldName || filename);
+    } catch (e) {
+      console.error('Failed to update cached DB after export', e);
+    }
+  });
+
+    // ==== 手动备份当前 DB（导出一份带时间戳的 .sqlite）====
+  function backupDbNow() {
+    if (!db) {
+      alert('No database loaded.');
+      return;
+    }
+    try {
+      const binaryArray = db.export(); // Uint8Array
+      const blob = new Blob([binaryArray], { type: 'application/x-sqlite3' });
+      const url = URL.createObjectURL(blob);
+
+      const now = new Date();
+      const pad = n => (n < 10 ? '0' + n : '' + n);
+      const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_` +
+                 `${pad(now.getHours())}${pad(now.getMinutes())}`;
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_${ts}.sqlite`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // 备份只是额外快照，不改变 dbDirty 状态
+      console.log('Manual backup created:', `backup_${ts}.sqlite`);
+    } catch (e) {
+      console.error('Backup failed:', e);
+      alert('Backup failed, please check console for details.');
+    }
+  }
+
+    // 手动备份按钮：导出 backup_YYYYMMDD_HHMM.sqlite
+  document.getElementById('btn-backup-db').addEventListener('click', () => {
+    backupDbNow();
+  });
+
+  // Initialize schema (if not exists)
+  function initSchema() {
+    if (!db) return;
+    db.run(`
+      CREATE TABLE IF NOT EXISTS boxes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        storage_temperature TEXT NOT NULL,
+        freezer_no TEXT NOT NULL,
+        rack TEXT NOT NULL,
+        box_label TEXT NOT NULL,
+        UNIQUE(storage_temperature, freezer_no, rack, box_label)
+      );
+    `);
+
+      // 兼容旧数据库：若原来没有 capacity 列，则尝试添加
+    try {
+        db.run(`ALTER TABLE boxes ADD COLUMN capacity INTEGER;`);
+    } catch (e) {
+        // 已经有该列时会报错，忽略即可
+    }
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS samples (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sample_id TEXT NOT NULL UNIQUE,
+        date TEXT,
+        experiment_label TEXT,
+        species_genotype TEXT,
+        model TEXT,
+        tissue TEXT,
+        sample_type TEXT,
+        notes TEXT,
+        processing TEXT,
+        parent_sample_id TEXT,
+        amount TEXT,
+        project TEXT,
+        status TEXT,
+        box_id INTEGER,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (box_id) REFERENCES boxes(id)
+      );
+    `);
+  }
+
+  // Helpers for running SELECT
+  function queryAll(sql, params = []) {
+    if (!db) return [];
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
+  }
+
+    // 将 Excel 单元格值安全地转成字符串
+  function cellToString(v) {
+    if (v === undefined || v === null) return '';
+    return String(v).trim();
+  }
+
+    // 从已有 sample_id 中解析末尾三位数字作为序号（失败则返回 0）
+  function parseSeqFromSampleId(sampleId) {
+    if (!sampleId) return 0;
+    const m = String(sampleId).match(/(\d{3})$/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  // Save sample form
+  document.getElementById('sample-form').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    if (!db) {
+      alert('Database not ready.');
+      return;
+    }
+
+    const sampleRowId = document.getElementById('internal_sample_row_id').value || null;
+
+    const sample = {
+      sample_id: document.getElementById('sample_id').value.trim(),
+      date: document.getElementById('date').value || null,
+      experiment_label: document.getElementById('experiment_label').value || null,
+      species_genotype: document.getElementById('species_genotype').value || null,
+      model: document.getElementById('model').value || null,
+      tissue: document.getElementById('tissue').value || null,
+      sample_type: document.getElementById('sample_type').value || null,
+      notes: document.getElementById('notes').value || null,
+      processing: document.getElementById('processing').value || null,
+      parent_sample_id: document.getElementById('parent_sample_id').value || null,
+      amount: document.getElementById('amount').value || null,
+      project: document.getElementById('project').value || null,
+      status: document.getElementById('status').value || 'available',
+      storage_temperature: document.getElementById('storage_temperature').value || '',
+      freezer_no: document.getElementById('freezer_no').value || '',
+      rack: document.getElementById('rack').value || '',
+      box_label: document.getElementById('box_label').value || ''
+    };
+
+    if (!sample.sample_id) {
+      alert('Sample ID is required.');
+      return;
+    }
+
+    db.run('BEGIN TRANSACTION;');
+
+    // 1) Ensure box exists (if any storage info present)
+    let boxId = null;
+    const hasAnyStorage = sample.storage_temperature || sample.freezer_no || sample.rack || sample.box_label;
+
+    if (hasAnyStorage && !sample.box_label) {
+      // 这里可以选择 silent，或者 alert 一下
+      // alert('检测到填写了 storage 信息但缺少 Box Label，暂不创建盒子。');
+    }
+
+    if (sample.box_label) {
+      const existingBox = queryAll(
+        `SELECT id FROM boxes
+         WHERE storage_temperature = ? AND freezer_no = ? AND rack = ? AND box_label = ?
+         LIMIT 1`,
+        [sample.storage_temperature || '', sample.freezer_no || '', sample.rack || '', sample.box_label]
+      );
+      if (existingBox.length > 0) {
+        boxId = existingBox[0].id;
+      } else {
+        const insertBoxStmt = db.prepare(`
+          INSERT INTO boxes (storage_temperature, freezer_no, rack, box_label)
+          VALUES (?, ?, ?, ?);
+        `);
+        insertBoxStmt.run([
+          sample.storage_temperature || '',
+          sample.freezer_no || '',
+          sample.rack || '',
+          sample.box_label
+        ]);
+        insertBoxStmt.free();
+        const row = queryAll('SELECT last_insert_rowid() AS id;')[0];
+        boxId = row.id;
+      }
+    }
+
+    // 2) Insert or update sample
+    if (sampleRowId) {
+      const updateStmt = db.prepare(`
+        UPDATE samples SET
+          sample_id = ?,
+          date = ?,
+          experiment_label = ?,
+          species_genotype = ?,
+          model = ?,
+          tissue = ?,
+          sample_type = ?,
+          notes = ?,
+          processing = ?,
+          parent_sample_id = ?,
+          amount = ?,
+          project = ?,
+          status = ?,
+          box_id = ?,
+          updated_at = datetime('now')
+        WHERE id = ?;
+      `);
+      updateStmt.run([
+        sample.sample_id,
+        sample.date,
+        sample.experiment_label,
+        sample.species_genotype,
+        sample.model,
+        sample.tissue,
+        sample.sample_type,
+        sample.notes,
+        sample.processing,
+        sample.parent_sample_id,
+        sample.amount,
+        sample.project,
+        sample.status,
+        boxId,
+        parseInt(sampleRowId, 10)
+      ]);
+      updateStmt.free();
+    } else {
+      const insertStmt = db.prepare(`
+        INSERT INTO samples
+          (sample_id, date, experiment_label, species_genotype, model, tissue, sample_type, notes,
+           processing, parent_sample_id, amount, project, status, box_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+      `);
+      insertStmt.run([
+        sample.sample_id,
+        sample.date,
+        sample.experiment_label,
+        sample.species_genotype,
+        sample.model,
+        sample.tissue,
+        sample.sample_type,
+        sample.notes,
+        sample.processing,
+        sample.parent_sample_id,
+        sample.amount,
+        sample.project,
+        sample.status,
+        boxId
+      ]);
+      insertStmt.free();
+    }
+
+    db.run('COMMIT;');
+    dbDirty = true;
+
+    resetForm();
+    refreshAllViews();
+  });
+
+  // Reset form
+  document.getElementById('btn-reset-form').addEventListener('click', () => {
+    resetForm();
+  });
+
+  function resetForm() {
+    document.getElementById('sample-form').reset();
+    document.getElementById('internal_sample_row_id').value = '';
+  }
+
+  // Render sample list
+  function isArchivedStatus(status) {
+    if (!status) return false;
+    const s = String(status).toLowerCase();
+    // 这里认为 archived / retired / discarded / consumed 都属于 “归档/已使用”
+    return s === 'archived' || s === 'retired' || s === 'discarded' || s === 'consumed';
+  }
+
+  function renderSamples() {
+    const tbody = document.querySelector('#samples-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!db) return;
+
+    const search = document.getElementById('search-input').value.trim().toLowerCase();
+    const statusFilter = document.getElementById('status-filter').value;
+
+    const rows = queryAll(`
+      SELECT s.id, 
+             s.sample_id,
+             s.date, 
+             s.experiment_label,
+             s.species_genotype, 
+             s.model, 
+             s.tissue, 
+             s.sample_type,
+             s.processing,
+             s.notes,
+             s.project, 
+             s.status,
+             b.storage_temperature, 
+             b.freezer_no, 
+             b.rack, 
+             b.box_label
+      FROM samples s
+      LEFT JOIN boxes b ON s.box_id = b.id
+      ORDER BY s.date ASC, s.sample_id ASC;
+    `);
+
+    const filtered = rows.filter(row => {
+      // 主列表仅显示“现存样本”；归档/已用完的样本放到 Archived 页
+      if (isArchivedStatus(row.status)) return false;
+
+      // 文本搜索
+      let text = [
+        row.sample_id || '',
+        row.tissue || '',
+        row.model || '',
+        row.project || '',
+        row.processing || '',
+        row.species_genotype || '',
+        row.experiment_label || ''
+      ].join(' ').toLowerCase();
+
+      if (search && !text.includes(search)) return false;
+
+      if (statusFilter) {
+        if (!row.status) return false;
+        if (String(row.status).toLowerCase() !== statusFilter.toLowerCase()) return false;
+      }
+
+      return true;
+    });
+
+    filtered.forEach(row => {
+      const tr = document.createElement('tr');
+
+        // 更优雅地拼 storage，避免出现 " |  | " 这种双竖线
+        const storageParts = [];
+        if (row.storage_temperature) storageParts.push(row.storage_temperature);
+        if (row.freezer_no)        storageParts.push(row.freezer_no);
+        if (row.rack)              storageParts.push(row.rack);
+        if (row.box_label)         storageParts.push(row.box_label);
+
+        const storageStr = storageParts.join(' / ');
+
+      // status 彩色 tag，和 box 一样的逻辑
+      let statusHtml = '';
+      if (row.status) {
+        let cls = 'tag';
+        const s = String(row.status).toLowerCase();
+        if (s.startsWith('available')) {
+          cls += ' tag-available';
+        } else if (s.startsWith('low')) {
+          cls += ' tag-low';
+        }
+        statusHtml = `<span class="${cls}">${row.status}</span>`;
+      }
+
+      tr.innerHTML = `
+        <td><input type="checkbox" class="sample-select" data-id="${row.id}"></td>
+        <td>${row.sample_id || ''}</td>
+        <td>${row.date || ''}</td>
+        <td>${row.experiment_label || ''}</td>
+        <td>${row.species_genotype || ''}</td>
+        <td>${row.model || ''}</td>
+        <td>${row.tissue || ''}</td>
+        <td>${row.sample_type || ''}</td>
+        <td>${row.processing || ''}</td>
+        <td>${row.notes || ''}</td>
+        <td>${row.project || ''}</td>
+        <td>${statusHtml}</td>
+        <td>${storageStr}</td>
+        <td>
+          <button data-id="${row.id}" class="btn-edit">Edit</button>
+          <button
+            data-id="${row.id}"
+            data-sample-id="${row.sample_id || ''}"
+            class="btn-archive"
+          >
+            Archive
+          </button>
+          <button
+            data-id="${row.id}"
+            data-sample-id="${row.sample_id || ''}"
+            class="btn-delete"
+          >
+            Delete
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // 行内 Edit
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        loadSampleToForm(id);
+      });
+    });
+
+    // 行内 Archive → status='archived'，移动到 Archived 页
+    document.querySelectorAll('.btn-archive').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        const sid = btn.getAttribute('data-sample-id') || '';
+        const label = sid ? `sample ${sid}` : `ID ${id}`;
+        if (!confirm(`Archive ${label}? It will be moved to the Archived tab.`)) return;
+        if (!db) return;
+
+        const stmt = db.prepare('UPDATE samples SET status = ? WHERE id = ?');
+        stmt.run(['archived', id]);
+        stmt.free();
+
+        dbDirty = true;
+        refreshAllViews();
+      });
+    });
+
+    // 行内 Delete → 真正删除，用于“录入错误”
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        const sid = btn.getAttribute('data-sample-id') || '';
+        const label = sid ? `sample ${sid}` : `ID ${id}`;
+        if (!confirm(`Permanently DELETE ${label}? Use this only for erroneous entries. This cannot be undone.`)) {
+          return;
+        }
+        if (!db) return;
+
+        const stmt = db.prepare('DELETE FROM samples WHERE id = ?');
+        stmt.run([id]);
+        stmt.free();
+
+        dbDirty = true;
+        refreshAllViews();
+      });
+    });
+
+    // 重新渲染时，重置 header 的全选勾选状态
+    const selectAll = document.getElementById('select-all-samples');
+    if (selectAll) {
+      selectAll.checked = false;
+    }
+  }
+
+  function renderArchivedSamples() {
+    const tbody = document.querySelector('#archived-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!db) return;
+
+    const search = document.getElementById('archived-search-input').value.trim().toLowerCase();
+
+    const rows = queryAll(`
+      SELECT s.id, 
+             s.sample_id,
+             s.date, 
+             s.experiment_label,
+             s.species_genotype, 
+             s.model, 
+             s.tissue, 
+             s.sample_type,
+             s.processing,
+             s.notes,
+             s.project, 
+             s.status,
+             b.storage_temperature, 
+             b.freezer_no, 
+             b.rack, 
+             b.box_label
+      FROM samples s
+      LEFT JOIN boxes b ON s.box_id = b.id
+      ORDER BY s.date ASC, s.sample_id ASC;
+    `);
+
+    const filtered = rows.filter(row => {
+      // 只显示归档/已用完的样本
+      if (!isArchivedStatus(row.status)) return false;
+
+      let text = [
+        row.sample_id || '',
+        row.tissue || '',
+        row.model || '',
+        row.project || '',
+        row.processing || '',
+        row.species_genotype || '',
+        row.experiment_label || ''
+      ].join(' ').toLowerCase();
+
+      if (search && !text.includes(search)) return false;
+      return true;
+    });
+
+    filtered.forEach(row => {
+      const tr = document.createElement('tr');
+
+      const storageStr = row.storage_temperature
+        ? `${row.storage_temperature} | ${row.freezer_no || ''} | ${row.rack || ''} | ${row.box_label || ''}`
+        : '';
+
+      let statusHtml = '';
+      if (row.status) {
+        let cls = 'tag';
+        const s = String(row.status).toLowerCase();
+        if (s.startsWith('available')) {
+          cls += ' tag-available';
+        } else if (s.startsWith('low')) {
+          cls += ' tag-low';
+        }
+        statusHtml = `<span class="${cls}">${row.status}</span>`;
+      }
+
+      tr.innerHTML = `
+        <td><input type="checkbox" class="archived-select" data-id="${row.id}"></td>
+        <td>${row.sample_id || ''}</td>
+        <td>${row.date || ''}</td>
+        <td>${row.experiment_label || ''}</td>
+        <td>${row.species_genotype || ''}</td>
+        <td>${row.model || ''}</td>
+        <td>${row.tissue || ''}</td>
+        <td>${row.sample_type || ''}</td>
+        <td>${row.processing || ''}</td>
+        <td>${row.notes || ''}</td>
+        <td>${row.project || ''}</td>
+        <td>${statusHtml}</td>
+        <td>${storageStr}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const selectAll = document.getElementById('select-all-archived');
+    if (selectAll) {
+      selectAll.checked = false;
+    }
+  }
+
+  function loadSampleToForm(id) {
+    if (!db) return;
+    const rows = queryAll(`
+      SELECT s.*, b.storage_temperature, b.freezer_no, b.rack, b.box_label
+      FROM samples s
+      LEFT JOIN boxes b ON s.box_id = b.id
+      WHERE s.id = ?
+      LIMIT 1;
+    `, [id]);
+
+    if (rows.length === 0) return;
+    const s = rows[0];
+    document.getElementById('internal_sample_row_id').value = s.id;
+    document.getElementById('sample_id').value = s.sample_id || '';
+    document.getElementById('date').value = s.date || '';
+    document.getElementById('experiment_label').value = s.experiment_label || '';
+    document.getElementById('species_genotype').value = s.species_genotype || '';
+    document.getElementById('model').value = s.model || '';
+    document.getElementById('tissue').value = s.tissue || '';
+    document.getElementById('sample_type').value = s.sample_type || '';
+    document.getElementById('notes').value = s.notes || '';
+    document.getElementById('processing').value = s.processing || '';
+    document.getElementById('parent_sample_id').value = s.parent_sample_id || '';
+    document.getElementById('amount').value = s.amount || '';
+    document.getElementById('project').value = s.project || '';
+    document.getElementById('status').value = s.status || 'available';
+    document.getElementById('storage_temperature').value = s.storage_temperature || '';
+    document.getElementById('freezer_no').value = s.freezer_no || '';
+    document.getElementById('rack').value = s.rack || '';
+    document.getElementById('box_label').value = s.box_label || '';
+  }
+
+    // ===== Secondary Sample Wizard =====
+
+  // Wizard 状态
+  let wizardPrimaryIds = [];
+  let wizardTypes = [];
+  let wizardProcessingByType = {};
+  let wizardNamingRule = 'parent-type';
+  let wizardCustomTemplate = '{parent}-{type}';
+
+  // Type → 缩写，尽量短，方便二维码
+  const WIZARD_TYPE_SHORT = {
+    'RNA': 'RNA',
+    'DNA': 'DNA',
+    'Protein lysate': 'Pr',
+    'Protein': 'Pr',
+    'Protein extract': 'Pr',
+    'cDNA library': 'cDNA',
+    'cDNA': 'cDNA',
+    'Cell suspension': 'Cell',
+    'PBMC': 'PBMC',
+    'Nuclei': 'Nuc',
+    'ATAC nuclei': 'Nuc',
+    'Metabolite extract': 'Met',
+    'Lipid extract': 'Lip',
+  };
+
+  // 各类型默认 processing 选项
+  const WIZARD_DEFAULT_PROCESSING = {
+    'RNA': ['+TRIzol', '+TRIzol LS', '+RNase-free water'],
+    'DNA': ['+Column kit', '+Phenol-chloroform', '+Magnetic bead purification'],
+    'Protein lysate': ['+RIPA buffer (+protease inhibitors)', '+NP40 lysis', '+SDS lysis', '+loading buffer'],
+    'Protein': ['+RIPA buffer (+protease inhibitors)', '+NP40 lysis', '+SDS lysis', '+loading buffer'],
+    'cDNA library': ['+Reverse transcription', '+RT kit', 'Other'],
+    'cDNA': ['+Reverse transcription', '+RT kit', 'Other'],
+    'Cell suspension': ['+PBS wash', '+0.04% BSA in PBS', '+RPMI + 10% FBS'],
+  };
+
+  function normalizeTypeKey(typeName) {
+    return (typeName || '').trim();
+  }
+
+  // 自动生成 / 读取缩写（自定义类型会弹窗确认）
+  function getTypeAbbrev(typeName) {
+    const key = normalizeTypeKey(typeName);
+    if (!key) return '';
+    if (WIZARD_TYPE_SHORT[key]) {
+      return WIZARD_TYPE_SHORT[key];
+    }
+    const words = key.split(/\s+/).filter(Boolean);
+    let abbr = words.map(w => w[0]).join('');
+    if (abbr.length > 3) abbr = abbr.slice(0, 3);
+    if (!abbr) abbr = key.slice(0, 3);
+    abbr = abbr.charAt(0).toUpperCase() + abbr.slice(1);
+
+    const ok = confirm(`Use abbreviation "${abbr}" for type "${key}" in sample_id?`);
+    if (!ok) return '';
+    WIZARD_TYPE_SHORT[key] = abbr; // 缓存下来
+    return abbr;
+  }
+
+  function getTodayYMD() {
+    const now = new Date();
+    const y = now.getFullYear().toString();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return y + m + d;
+  }
+
+  // 避免 sample_id 冲突：ParentID-TYPE, ParentID-TYPE2, ...
+  function generateUniqueChildSampleId(parentSampleId, typeAbbrev) {
+    let base = `${parentSampleId}-${typeAbbrev}`;
+    let candidate = base;
+    let suffix = 2;
+    while (true) {
+      const res = queryAll(`SELECT COUNT(*) AS c FROM samples WHERE sample_id = ?`, [candidate]);
+      const count = res && res[0] ? res[0].c : 0;
+      if (!count) return candidate;
+      candidate = `${base}${suffix}`;
+      suffix++;
+      if (suffix > 99) {
+        return `${base}-${Date.now()}`;
+      }
+    }
+  }
+
+  function showWizardStep(step) {
+    [1, 2, 3, 4].forEach(n => {
+      const el = document.getElementById(`wizard-step-${n}`);
+      if (!el) return;
+      if (n === step) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    });
+  }
+
+  function openWizard() {
+    const selected = Array.from(document.querySelectorAll('.sample-select:checked'));
+    if (selected.length === 0) {
+      alert('请先在 Sample List 中勾选至少一个一次样本。');
+      return;
+    }
+    wizardPrimaryIds = selected
+      .map(cb => parseInt(cb.getAttribute('data-id'), 10))
+      .filter(id => !isNaN(id));
+
+    if (wizardPrimaryIds.length === 0) {
+      alert('Selected rows do not have valid IDs.');
+      return;
+    }
+
+    wizardTypes = [];
+    wizardProcessingByType = {};
+    wizardNamingRule = 'parent-type';
+    wizardCustomTemplate = '{parent}-{type}';
+
+    document.querySelectorAll('.wizard-type-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('wizard-custom-type').value = '';
+    document.getElementById('wizard-custom-template').value = '';
+    document.getElementById('wizard-primary-count-hint').textContent =
+      `Selected primary samples: ${wizardPrimaryIds.length}`;
+
+    // 默认命名规则
+    document.querySelectorAll('input[name="wizard-naming-rule"]').forEach(r => {
+      r.checked = (r.value === 'parent-type');
+    });
+
+    showWizardStep(1);
+    const bd = document.getElementById('wizard-backdrop');
+    if (bd) {
+      bd.classList.remove('hidden');
+      bd.style.display = 'flex';   // 显示 modal
+    }
+  }
+
+    function closeWizard() {
+    const bd = document.getElementById('wizard-backdrop');  // ← 修正了 getElementById
+    if (!bd) return;
+    bd.classList.add('hidden');
+    bd.style.display = 'none';     // 强制隐藏
+  }
+
+  function buildProcessingUI() {
+    const container = document.getElementById('wizard-processing-container');
+    container.innerHTML = '';
+
+    wizardTypes.forEach(typeName => {
+      const key = normalizeTypeKey(typeName);
+      const block = document.createElement('div');
+      block.className = 'wizard-type-block';
+
+      const title = document.createElement('div');
+      title.className = 'wizard-type-block-title';
+      title.textContent = key;
+      block.appendChild(title);
+
+      const optionsDiv = document.createElement('div');
+      optionsDiv.className = 'wizard-type-block-options';
+
+      const defaultList = WIZARD_DEFAULT_PROCESSING[key] || [];
+      const saved = localStorage.getItem('wizard_last_processing_' + key);
+      const radioName = 'wizard-proc-' + key;
+
+      defaultList.forEach(opt => {
+        if (opt === 'Other') return;
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = radioName;
+        input.value = opt;
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(' ' + opt));
+        optionsDiv.appendChild(label);
+      });
+
+      const otherLabel = document.createElement('label');
+      const otherRadio = document.createElement('input');
+      otherRadio.type = 'radio';
+      otherRadio.name = radioName;
+      otherRadio.value = '__other__';
+
+      const otherText = document.createElement('input');
+      otherText.type = 'text';
+      otherText.className = 'wizard-proc-other';
+      otherText.setAttribute('data-type', key);
+      otherText.placeholder = 'Other...';
+
+      otherLabel.appendChild(otherRadio);
+      otherLabel.appendChild(document.createTextNode(' Other: '));
+      otherLabel.appendChild(otherText);
+      optionsDiv.appendChild(otherLabel);
+
+      block.appendChild(optionsDiv);
+      container.appendChild(block);
+
+      if (saved) {
+        const radios = optionsDiv.querySelectorAll(`input[name="${radioName}"]`);
+        let matched = false;
+        radios.forEach(r => {
+          if (r.value === saved) {
+            r.checked = true;
+            matched = true;
+          }
+        });
+        if (!matched) {
+          otherRadio.checked = true;
+          otherText.value = saved;
+        }
+      } else {
+        const firstRadio = optionsDiv.querySelector(`input[name="${radioName}"]`);
+        if (firstRadio) firstRadio.checked = true;
+      }
+    });
+  }
+
+  // 绑定 Wizard 按钮
+  document.getElementById('btn-open-secondary-wizard').addEventListener('click', openWizard);
+  document.getElementById('wizard-close-btn').addEventListener('click', closeWizard);
+  document.getElementById('wizard-cancel-1').addEventListener('click', closeWizard);
+
+  // Step 1 → Step 2
+  document.getElementById('wizard-next-1').addEventListener('click', () => {
+    const types = [];
+    document.querySelectorAll('.wizard-type-checkbox').forEach(cb => {
+      if (cb.checked) types.push(cb.value);
+    });
+    const custom = document.getElementById('wizard-custom-type').value.trim();
+    if (custom) types.push(custom);
+
+    if (types.length === 0) {
+      alert('请至少选择一种二次样本类型，或填写 Custom type。');
+      return;
+    }
+    wizardTypes = types;
+    buildProcessingUI();
+    showWizardStep(2);
+  });
+
+  // Step 2 Back
+  document.getElementById('wizard-prev-2').addEventListener('click', () => {
+    showWizardStep(1);
+  });
+
+  // Step 2 → Step 3
+  document.getElementById('wizard-next-2').addEventListener('click', () => {
+    const procMap = {};
+    for (const typeName of wizardTypes) {
+      const key = normalizeTypeKey(typeName);
+      const radioName = 'wizard-proc-' + key;
+      const selected = document.querySelector(`input[name="${radioName}"]:checked`);
+      if (!selected) {
+        alert(`Please choose processing for type: ${key}`);
+        return;
+      }
+      let val = selected.value;
+      if (val === '__other__') {
+        const otherInput = document.querySelector(`.wizard-proc-other[data-type="${key}"]`);
+        val = (otherInput && otherInput.value.trim()) || '';
+        if (!val) {
+          alert(`Please fill in the processing text for: ${key}`);
+          return;
+        }
+      }
+      procMap[key] = val;
+      localStorage.setItem('wizard_last_processing_' + key, val);
+    }
+    wizardProcessingByType = procMap;
+    showWizardStep(3);
+  });
+
+  // Step 3 Back
+  document.getElementById('wizard-prev-3').addEventListener('click', () => {
+    showWizardStep(2);
+  });
+
+  // Step 3 → Step 4
+  document.getElementById('wizard-next-3').addEventListener('click', () => {
+    let rule = 'parent-type';
+    document.querySelectorAll('input[name="wizard-naming-rule"]').forEach(r => {
+      if (r.checked) rule = r.value;
+    });
+    wizardNamingRule = rule;
+
+    if (rule === 'custom') {
+      const tpl = document.getElementById('wizard-custom-template').value.trim();
+      if (!tpl) {
+        alert('请填写自定义模板，至少包含 {parent} 或 {type}。');
+        return;
+      }
+      wizardCustomTemplate = tpl;
+    } else {
+      wizardCustomTemplate = '{parent}-{type}';
+    }
+
+    const summaryDiv = document.getElementById('wizard-summary');
+    const lines = [];
+    lines.push(`Primary samples selected: ${wizardPrimaryIds.length}`);
+    lines.push('');
+    lines.push('Types and processing:');
+    wizardTypes.forEach(t => {
+      const key = normalizeTypeKey(t);
+      lines.push(`  - ${key}: ${wizardProcessingByType[key] || ''}`);
+    });
+    lines.push('');
+    lines.push('Naming rule: ' + (wizardNamingRule === 'parent-type'
+      ? 'ParentID-TYPE'
+      : `Custom: ${wizardCustomTemplate}`));
+    lines.push('');
+    lines.push('Example IDs (first primary sample):');
+
+    try {
+      if (wizardPrimaryIds.length > 0) {
+        const firstId = wizardPrimaryIds[0];
+        const r = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [firstId])[0];
+        if (r && r.sample_id) {
+          const parentSid = r.sample_id;
+          wizardTypes.forEach(t => {
+            const abbrev = getTypeAbbrev(t);
+            if (!abbrev) return;
+            let exampleId;
+            if (wizardNamingRule === 'parent-type') {
+              exampleId = `${parentSid}-${abbrev}`;
+            } else {
+              exampleId = wizardCustomTemplate
+                .replace(/\{parent\}/g, parentSid)
+                .replace(/\{type\}/g, abbrev)
+                .replace(/\{n\}/g, '1');
+            }
+            lines.push(`  · ${exampleId}`);
+          });
+        }
+      }
+    } catch (err) {
+      // ignore
+    }
+
+    summaryDiv.textContent = lines.join('\n');
+    showWizardStep(4);
+  });
+
+  // Step 4 Back
+  document.getElementById('wizard-prev-4').addEventListener('click', () => {
+    showWizardStep(3);
+  });
+
+  // 最终生成二次样本：date = 当天，不继承 parent 的 date
+  document.getElementById('wizard-generate').addEventListener('click', () => {
+    if (!db) return;
+    if (wizardPrimaryIds.length === 0 || wizardTypes.length === 0) {
+      alert('No primary samples or types in wizard.');
+      return;
+    }
+
+    const today = getTodayYMD();
+
+    db.run('BEGIN TRANSACTION;');
+    try {
+      const insertStmt = db.prepare(`
+        INSERT INTO samples
+          (sample_id, date, experiment_label, species_genotype, model, tissue,
+           sample_type, notes, processing, parent_sample_id, amount, project, status, box_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+      `);
+
+      wizardPrimaryIds.forEach(pid => {
+        const row = queryAll('SELECT * FROM samples WHERE id = ? LIMIT 1;', [pid])[0];
+        if (!row) return;
+
+        wizardTypes.forEach(t => {
+          const key = normalizeTypeKey(t);
+          const processing = wizardProcessingByType[key] || '';
+          const abbrev = getTypeAbbrev(key);
+          if (!abbrev) return;
+
+          const parentSid = row.sample_id || '';
+          if (!parentSid) return;
+
+          const newSid = generateUniqueChildSampleId(parentSid, abbrev);
+
+          insertStmt.run([
+            newSid,
+            today,                    // date = 生成当天
+            row.experiment_label || '',
+            row.species_genotype || '',
+            row.model || '',
+            row.tissue || '',
+            key,
+            row.notes || '',
+            processing,
+            row.id,                   // parent_sample_id = parent 的内部 id
+            null,                     // amount
+            row.project || '',
+            'available',
+            null                      // box_id 暂不指定
+          ]);
+        });
+      });
+
+      insertStmt.free();
+      db.run('COMMIT;');
+      dbDirty = true;
+      refreshAllViews();
+      closeWizard();
+      alert('Secondary samples generated.');
+    } catch (err) {
+      try { db.run('ROLLBACK;'); } catch(_) {}
+      alert('Error while generating secondary samples: ' + err);
+    }
+  });
+
+    // Box view (grouped by temperature + freezer, grid layout)
+  function renderBoxes() {
+    const container = document.getElementById('boxes-container');
+    container.innerHTML = '';
+    if (!db) return;
+
+    // 注意：sample_count 只统计「未 retired」的样本：
+    // 把 status 为 consumed / discarded 的样本视为已退役，不计入当前管数
+    const boxes = queryAll(`
+      SELECT
+        b.id,
+        b.storage_temperature,
+        b.freezer_no,
+        b.rack,
+        b.box_label,
+        COUNT(s.id) AS sample_count
+      FROM boxes b
+      LEFT JOIN samples s 
+        ON s.box_id = b.id
+       AND (s.status IS NULL OR s.status NOT IN ('archived','retired','discarded','consumed'))
+      GROUP BY b.id, b.storage_temperature, b.freezer_no, b.rack, b.box_label
+      ORDER BY b.storage_temperature, b.freezer_no, b.rack, b.box_label;
+    `);
+
+    if (!boxes || boxes.length === 0) {
+      container.textContent = 'No boxes found.';
+      return;
+    }
+
+    // group by temperature + freezer
+    const groups = {};
+    boxes.forEach(b => {
+      const temp = b.storage_temperature || 'Unknown';
+      const freezer = b.freezer_no || 'N/A';
+      const key = `${temp}||${freezer}`;
+      if (!groups[key]) {
+        groups[key] = {
+          storage_temperature: temp,
+          freezer_no: freezer,
+          boxes: []
+        };
+      }
+      groups[key].boxes.push(b);
+    });
+
+    // sort groups (temperature, then freezer)
+    const groupKeys = Object.keys(groups).sort((a, b) => {
+      const ga = groups[a];
+      const gb = groups[b];
+      const tA = (ga.storage_temperature || '').toString();
+      const tB = (gb.storage_temperature || '').toString();
+      if (tA === tB) {
+        const fA = (ga.freezer_no || '').toString();
+        const fB = (gb.freezer_no || '').toString();
+        return fA.localeCompare(fB, 'en', { numeric: true });
+      }
+      return tA.localeCompare(tB, 'en', { numeric: true });
+    });
+
+    // render each temperature+freezer group
+    groupKeys.forEach(key => {
+      const group = groups[key];
+
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'box-group';
+
+      const header = document.createElement('div');
+      header.className = 'box-group-header';
+      header.textContent = `${group.storage_temperature} | Freezer: ${group.freezer_no}`;
+      groupDiv.appendChild(header);
+
+      const grid = document.createElement('div');
+      grid.className = 'box-grid';
+
+      // sort boxes within group by rack, then box_label
+      const groupBoxes = group.boxes.slice().sort((a, b) => {
+        const rA = (a.rack || '').toString();
+        const rB = (b.rack || '').toString();
+        if (rA === rB) {
+          const xA = (a.box_label || '').toString();
+          const xB = (b.box_label || '').toString();
+          return xA.localeCompare(xB, 'en', { numeric: true });
+        }
+        return rA.localeCompare(rB, 'en', { numeric: true });
+      });
+
+      groupBoxes.forEach(box => {
+        const card = document.createElement('div');
+        card.className = 'box-card';
+
+        // header 区：box 信息 + 折叠/展开按钮
+        const cardHeader = document.createElement('div');
+        cardHeader.style.display = 'flex';
+        cardHeader.style.alignItems = 'center';
+        cardHeader.style.gap = '6px';
+
+        const infoDiv = document.createElement('div');
+        const rackText = box.rack ? `Rack: ${box.rack}` : '';
+        infoDiv.innerHTML = `
+          <div><strong>${box.box_label || ''}</strong></div>
+          <div class="small">${rackText}${rackText && box.sample_count ? ' · ' : ''}${box.sample_count} tubes</div>
+        `;
+        cardHeader.appendChild(infoDiv);
+
+        let toggleBtn = null;
+        if (box.sample_count > 0) {
+          toggleBtn = document.createElement('button');
+          toggleBtn.type = 'button';
+          toggleBtn.className = 'sample-toggle small';
+          toggleBtn.textContent = `Show samples (${box.sample_count})`;
+          cardHeader.appendChild(toggleBtn);
+        }
+
+        card.appendChild(cardHeader);
+
+        // sample list（只显示未 retired 的样本：隐藏 consumed / discarded）
+        const samples = queryAll(`
+          SELECT sample_id, date, species_genotype, model, tissue, sample_type, processing, status, project
+          FROM samples
+          WHERE box_id = ?
+            AND (status IS NULL OR status NOT IN ('archived','retired','discarded','consumed'))
+          ORDER BY date ASC, sample_id ASC;
+        `, [box.id]);
+
+        let listWrapper = null;
+        if (samples.length > 0) {
+          listWrapper = document.createElement('div');
+          const ul = document.createElement('ul');
+          ul.className = 'box-sample-list';
+
+          samples.forEach(s => {
+            const li = document.createElement('li');
+
+            // sample_id：固定宽度，作为主列对齐
+            const main = document.createElement('span');
+            main.className = 'sample-main';
+            main.textContent = s.sample_id || '';
+            li.appendChild(main);
+
+            // 第一行 meta：date + species_genotype + model
+            const metaParts1 = [];
+            if (s.date) metaParts1.push(s.date);
+            if (s.species_genotype) metaParts1.push(s.species_genotype);
+            if (s.model) metaParts1.push(s.model);
+            if (metaParts1.length) {
+              const meta1 = document.createElement('span');
+              meta1.className = 'sample-meta';
+              meta1.textContent = metaParts1.join(' · ');
+              li.appendChild(meta1);
+            }
+
+            // 第二行 meta：tissue + sample_type + processing
+            const metaParts2 = [];
+            if (s.tissue) metaParts2.push(s.tissue);
+            if (s.sample_type) metaParts2.push(s.sample_type);
+            if (s.processing) metaParts2.push(s.processing);
+            if (metaParts2.length) {
+              const meta2 = document.createElement('span');
+              meta2.className = 'sample-meta';
+              meta2.textContent = metaParts2.join(' · ');
+              li.appendChild(meta2);
+            }
+
+            // status tag：available/low 专门上色，其他默认灰色
+            if (s.status) {
+              const statusSpan = document.createElement('span');
+              let cls = 'tag sample-status';
+              const statusLower = String(s.status).toLowerCase();
+              if (statusLower.startsWith('available')) {
+                cls += ' tag-available';
+              } else if (statusLower.startsWith('low')) {
+                cls += ' tag-low';
+              }
+              statusSpan.className = cls;
+              statusSpan.textContent = s.status;
+              li.appendChild(statusSpan);
+            }
+
+            // project tag
+            if (s.project) {
+              const projSpan = document.createElement('span');
+              projSpan.className = 'tag sample-status';
+              projSpan.textContent = s.project;
+              li.appendChild(projSpan);
+            }
+
+            ul.appendChild(li);
+          });
+
+          listWrapper.appendChild(ul);
+          card.appendChild(listWrapper);
+        }
+
+        // 折叠/展开逻辑：默认折叠
+        if (toggleBtn && listWrapper) {
+          listWrapper.style.display = 'none';
+          toggleBtn.textContent = `Show samples (${box.sample_count})`;
+          toggleBtn.addEventListener('click', () => {
+            const hidden = listWrapper.style.display === 'none';
+            listWrapper.style.display = hidden ? 'block' : 'none';
+            toggleBtn.textContent = hidden
+              ? `Hide samples (${box.sample_count})`
+              : `Show samples (${box.sample_count})`;
+          });
+        }
+
+        grid.appendChild(card);
+      });
+
+      groupDiv.appendChild(grid);
+      container.appendChild(groupDiv);
+    });
+  }
+
+  // 自动根据日期生成 Sample ID：YYYYMMDD-001, 002, ...
+  function generateSampleIdFromDate() {
+    if (!db) {
+      alert('Database not ready.');
+      return;
+    }
+    const dateInput = document.getElementById('date').value.trim();
+    if (!dateInput || dateInput.length !== 8) {
+      alert('请先在 Date 中输入 8 位数字日期（YYYYMMDD），例如 20250213。');
+      return;
+    }
+
+    // 查询该日期下已有的最大 sample_id
+    const rows = queryAll(
+      `
+      SELECT sample_id
+      FROM samples
+      WHERE date = ?
+      ORDER BY sample_id DESC
+      LIMIT 1;
+      `,
+      [dateInput]
+    );
+
+    let nextSeq = 1;
+    if (rows.length > 0 && rows[0].sample_id) {
+      // 尝试从已有的 sample_id 末尾解析三位数字
+      const m = String(rows[0].sample_id).match(/(\d{3})$/);
+      if (m) {
+        nextSeq = parseInt(m[1], 10) + 1;
+      }
+    }
+
+    const seqStr = String(nextSeq).padStart(3, '0');
+    const newId = `${dateInput}-${seqStr}`;
+    document.getElementById('sample_id').value = newId;
+  }
+
+  function refreshAllViews() {
+    renderSamples();
+    renderArchivedSamples();
+    renderBoxes();
+  }
+
+  // --- Tabs: show/hide sections ---
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabSections = {
+    form: document.getElementById('section-form'),
+    samples: document.getElementById('section-samples'),
+    archived: document.getElementById('section-archived'),
+    boxes: document.getElementById('section-boxes'),
+  };
+
+  function setActiveTab(name) {
+    // 控制 section 显隐
+    Object.keys(tabSections).forEach(key => {
+      if (tabSections[key]) {
+        tabSections[key].style.display = (key === name) ? 'block' : 'none';
+      }
+    });
+    // 控制 tab 的 active 样式
+    tabButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === name);
+    });
+  }
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.dataset.tab;
+      setActiveTab(tabName);
+    });
+  });
+
+  // 默认打开时显示录入页面
+  setActiveTab('form');
+
+  document.getElementById('search-input').addEventListener('input', () => {
+    renderSamples();
+  });
+  document.getElementById('status-filter').addEventListener('change', () => {
+    renderSamples();
+  });
+  const archivedSearch = document.getElementById('archived-search-input');
+  if (archivedSearch) {
+    archivedSearch.addEventListener('input', () => {
+      renderArchivedSamples();
+    });
+  }
+
+  // 批量操作：active samples
+  const btnArchiveSelected = document.getElementById('btn-archive-selected');
+  if (btnArchiveSelected) {
+    btnArchiveSelected.addEventListener('click', () => {
+      if (!db) return;
+      const checked = Array.from(document.querySelectorAll('.sample-select:checked'));
+      if (checked.length === 0) {
+        alert('No samples selected.');
+        return;
+      }
+      if (!confirm(`Archive ${checked.length} selected samples?`)) return;
+      const stmt = db.prepare('UPDATE samples SET status = ? WHERE id = ?');
+      checked.forEach(cb => {
+        const id = parseInt(cb.getAttribute('data-id'), 10);
+        stmt.run(['archived', id]);
+      });
+      stmt.free();
+      dbDirty = true;
+      refreshAllViews();
+    });
+  }
+
+  const btnDeleteSelected = document.getElementById('btn-delete-selected');
+  if (btnDeleteSelected) {
+    btnDeleteSelected.addEventListener('click', () => {
+      if (!db) return;
+      const checked = Array.from(document.querySelectorAll('.sample-select:checked'));
+      if (checked.length === 0) {
+        alert('No samples selected.');
+        return;
+      }
+      if (!confirm(`Permanently DELETE ${checked.length} selected samples? This is intended only for erroneous rows.`)) return;
+      const stmt = db.prepare('DELETE FROM samples WHERE id = ?');
+      checked.forEach(cb => {
+        const id = parseInt(cb.getAttribute('data-id'), 10);
+        stmt.run([id]);
+      });
+      stmt.free();
+      dbDirty = true;
+      refreshAllViews();
+    });
+  }
+
+  // 批量操作：archived samples
+  const btnUnarchiveSelected = document.getElementById('btn-unarchive-selected');
+  if (btnUnarchiveSelected) {
+    btnUnarchiveSelected.addEventListener('click', () => {
+      if (!db) return;
+      const checked = Array.from(document.querySelectorAll('.archived-select:checked'));
+      if (checked.length === 0) {
+        alert('No samples selected.');
+        return;
+      }
+      if (!confirm(`Unarchive ${checked.length} selected samples? They will move back to the active Sample List.`)) return;
+      const stmt = db.prepare('UPDATE samples SET status = ? WHERE id = ?');
+      checked.forEach(cb => {
+        const id = parseInt(cb.getAttribute('data-id'), 10);
+        stmt.run([null, id]);   // 置为 NULL，相当于“未标明状态”
+      });
+      stmt.free();
+      dbDirty = true;
+      refreshAllViews();
+    });
+  }
+
+  const btnDeleteArchived = document.getElementById('btn-delete-archived');
+  if (btnDeleteArchived) {
+    btnDeleteArchived.addEventListener('click', () => {
+      if (!db) return;
+      const checked = Array.from(document.querySelectorAll('.archived-select:checked'));
+      if (checked.length === 0) {
+        alert('No samples selected.');
+        return;
+      }
+      if (!confirm(`Permanently DELETE ${checked.length} archived samples?`)) return;
+      const stmt = db.prepare('DELETE FROM samples WHERE id = ?');
+      checked.forEach(cb => {
+        const id = parseInt(cb.getAttribute('data-id'), 10);
+        stmt.run([id]);
+      });
+      stmt.free();
+      dbDirty = true;
+      refreshAllViews();
+    });
+  }
+
+  // ---- SHIFT + CLICK multi-select for checkboxes (active + archived) ----
+    function enableShiftSelect(selector) {
+    let lastChecked = null;
+
+    document.addEventListener('click', function (e) {
+        const target = e.target;
+        if (!target.matches(selector)) return;
+
+        const checkboxes = Array.from(document.querySelectorAll(selector));
+        const currentIndex = checkboxes.indexOf(target);
+
+        if (e.shiftKey && lastChecked !== null) {
+        const lastIndex = checkboxes.indexOf(lastChecked);
+        const [start, end] = [lastIndex, currentIndex].sort((a, b) => a - b);
+        const newState = target.checked;
+
+        for (let i = start; i <= end; i++) {
+            checkboxes[i].checked = newState;
+        }
+        }
+
+        lastChecked = target;
+    });
+    }
+
+    // 启用 shift-select：两个列表各自绑定
+    enableShiftSelect('.sample-select');
+    enableShiftSelect('.archived-select');
+
+
+  // 选择全部：active
+
+  const selectAllActive = document.getElementById('select-all-samples');
+  if (selectAllActive) {
+    selectAllActive.addEventListener('change', () => {
+      const checked = selectAllActive.checked;
+      document.querySelectorAll('.sample-select').forEach(cb => {
+        cb.checked = checked;
+        const tr = cb.closest('tr');
+        if (tr) {
+          tr.classList.toggle('row-selected', checked);
+        }
+      });
+    });
+  }
+
+  // 选择全部：archived
+  const selectAllArchived = document.getElementById('select-all-archived');
+  if (selectAllArchived) {
+    selectAllArchived.addEventListener('change', () => {
+      const checked = selectAllArchived.checked;
+      document.querySelectorAll('.archived-select').forEach(cb => {
+        cb.checked = checked;
+        const tr = cb.closest('tr');
+        if (tr) {
+          tr.classList.toggle('row-selected', checked);
+        }
+      });
+    });
+  }
+
+    // 单个勾选/取消时，同步更新所在行的高亮状态
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('.sample-select, .archived-select')) {
+      const cb = e.target;
+      const tr = cb.closest('tr');
+      if (tr) {
+        tr.classList.toggle('row-selected', cb.checked);
+      }
+    }
+  });
+
+  const btnGenerateId = document.getElementById('btn-generate-id');
+  if (btnGenerateId) {
+    btnGenerateId.addEventListener('click', generateSampleIdFromDate);
+  }
+
+  // ---- Generate secondary samples from selected primary samples ----
+document.getElementById('btn-generate-secondary').addEventListener('click', async () => {
+  if (!db) return;
+
+  const selected = Array.from(document.querySelectorAll('.sample-select:checked'));
+  if (selected.length === 0) {
+    alert('Please select at least one primary sample.');
+    return;
+  }
+
+  const sampleType = prompt("Enter secondary sample type (e.g., RNA / DNA / Protein / Lysate):");
+  if (!sampleType) return;
+
+  const processing = prompt("Enter processing method (e.g., +TRIzol / +lysis buffer):", "");
+
+  for (const cb of selected) {
+    const id = parseInt(cb.getAttribute('data-id'), 10);
+
+    // 获取一次样本的所有信息
+    const row = queryAll(`
+      SELECT *
+      FROM samples
+      WHERE id = ?
+    `, [id])[0];
+
+    if (!row) continue;
+
+    const parentId = row.id;
+
+    // 获取当前日期 YYYYMMDD
+    const now = new Date();
+    const currentDate = now.getFullYear().toString() +
+                        String(now.getMonth() + 1).padStart(2, '0') +
+                        String(now.getDate()).padStart(2, '0');
+
+    // 自动生成二次 sample_id：格式 “父ID-类型”
+    const newSampleId = `${row.sample_id}-${sampleType.toUpperCase()}`;
+
+    // 写入数据库
+    const stmt = db.prepare(`
+      INSERT INTO samples
+        (sample_id, date, species_genotype, model, tissue,
+         sample_type, processing, project, status, parent_sample_id,
+         box_id, experiment_label, notes)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `);
+
+    stmt.run([
+      newSampleId,
+      currentDate,
+      row.species_genotype,
+      row.model,
+      row.tissue,
+      sampleType,
+      processing || '',
+      row.project,
+      'available',
+      parentId,
+      null,             // box_id 让你之后自行放进盒子
+      row.experiment_label,
+      row.notes
+    ]);
+    stmt.free();
+  }
+
+  dbDirty = true;
+  refreshAllViews();
+  alert("Secondary samples generated.");
+});
+
+
+  // Excel export using SheetJS
+  document.getElementById('btn-export-xlsx').addEventListener('click', () => {
+    if (!db) {
+      alert('No database loaded.');
+      return;
+    }
+    const rows = queryAll(`
+      SELECT s.sample_id, s.date, s.experiment_label, s.species_genotype, s.model, s.tissue, s.sample_type,
+             s.notes, s.processing, s.parent_sample_id, s.amount,
+             s.project, s.status,
+             b.storage_temperature, b.freezer_no, b.rack, b.box_label
+      FROM samples s
+      LEFT JOIN boxes b ON s.box_id = b.id
+      ORDER BY s.date ASC, s.sample_id ASC;
+    `);
+
+    const data = rows.map(r => ({
+      sample_id: r.sample_id || '',
+      date: r.date || '',
+      experiment_label: r.experiment_label || '',
+      species_genotype: r.species_genotype || '',
+      model: r.model || '',
+      tissue: r.tissue || '',
+      sample_type: r.sample_type || '',
+      notes: r.notes || '',
+      processing: r.processing || '',
+      parent_sample_id: r.parent_sample_id || '',
+      amount: r.amount || '',
+      project: r.project || '',
+      status: r.status || '',
+      storage_temperature: r.storage_temperature || '',
+      freezer_no: r.freezer_no || '',
+      rack: r.rack || '',
+      box_label: r.box_label || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'samples');
+    const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    XLSX.writeFile(wb, `samples_${ts}.xlsx`);
+  });
+
+  // 精简字段的标签导出：
+  // 1) 优先导出当前勾选的样本；
+  // 2) 若未勾选，则按 Label date (YYYYMMDD) 过滤导出当天所有样本。
+  document.getElementById('btn-export-labels-xlsx').addEventListener('click', () => {
+    if (!db) {
+      alert('No database loaded.');
+      return;
+    }
+
+    // 先看是否勾选了样本
+    const selectedChecks = Array.from(document.querySelectorAll('.sample-select:checked'));
+    let rows = [];
+
+    if (selectedChecks.length > 0) {
+      // 情形 1：有勾选 → 导出选中的样本
+      const ids = selectedChecks.map(cb => parseInt(cb.getAttribute('data-id'), 10));
+      const placeholders = ids.map(() => '?').join(',');
+
+      rows = queryAll(`
+        SELECT sample_id, date, experiment_label, species_genotype, model, tissue,
+               sample_type, processing, status
+        FROM samples
+        WHERE id IN (${placeholders})
+          AND (status IS NULL OR status != 'retired')
+        ORDER BY date ASC, sample_id ASC;
+      `, ids);
+
+      if (!rows || rows.length === 0) {
+        alert('选中的样本中没有可导出的记录（可能已标记为 retired）。');
+        return;
+      }
+
+    } else {
+      // 情形 2：没有勾选任何样本 → 使用 Label date 作为筛选条件
+      let labelDate = document.getElementById('label-export-date').value.trim();
+
+      // 如果没填 Label date，就尝试用当前表单里的 Date 作为默认
+      if (!labelDate) {
+        const formDate = document.getElementById('date').value.trim();
+        if (formDate && formDate.length === 8) {
+          labelDate = formDate;
+          document.getElementById('label-export-date').value = formDate; // 顺便写回去
+        }
+      }
+
+      if (!labelDate || labelDate.length !== 8) {
+        alert('请在 "Label date" 中输入 8 位日期（YYYYMMDD），例如 20250213；\n或者先在 Sample List 中勾选要导出的样本。');
+        return;
+      }
+
+      rows = queryAll(`
+        SELECT sample_id, date, experiment_label, species_genotype, model, tissue,
+               sample_type, processing, status
+        FROM samples
+        WHERE date = ?
+          AND (status IS NULL OR status != 'retired')
+        ORDER BY sample_id ASC;
+      `, [labelDate]);
+
+      if (!rows || rows.length === 0) {
+        alert('该日期下（' + labelDate + '）没有可导出的样本。');
+        return;
+      }
+    }
+
+    // 生成用于标签打印的精简字段
+    // 最终导出 5 列：
+    //  sample_id
+    //  date
+    //  species_genotype
+    //  group（= model）
+    //  tissue_sampletype_processing
+    const data = rows.map(r => {
+      const sample_id = r.sample_id || '';
+      const date = r.date || '';
+      const species_genotype = r.species_genotype || '';
+      const group = r.model || '';
+      const tissue = r.tissue || '';
+      const sample_type = (r.sample_type || '').trim();
+      const processing = (r.processing || '').trim();
+
+      // 判断 sample_type 是否属于“一次样本类型”
+      const lowerType = sample_type.toLowerCase();
+      const primaryTypes = ['tissue', 'serum', 'plasma', 'pbmc', 'whole blood'];
+
+      let tailParts;
+
+      if (!tissue && !sample_type && !processing) {
+        // 三个都空，就不给最后一行内容
+        tailParts = [];
+      } else {
+        // 二次样本（RNA/DNA/Protein 等） → tissue.sample_type.processing
+        if (sample_type && !primaryTypes.includes(lowerType)) {
+          tailParts = [tissue, sample_type, processing].filter(Boolean);
+        } else {
+          // 一次样本（tissue / serum / plasma / PBMC 等） → tissue.processing
+          tailParts = [tissue, processing].filter(Boolean);
+        }
+      }
+
+      const combined = tailParts.join('.');  // tissue.sample_type.processing 或 tissue.processing
+
+      return {
+        sample_id,
+        date,
+        species_genotype,
+        group,
+        tissue_sampletype_processing: combined
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'labels');
+
+    // 文件名：如果是按日期筛选，就用标签日期；如果是勾选导出，就用当前时间戳
+    let fileSuffix = '';
+    const labelDateVal = document.getElementById('label-export-date').value.trim();
+    if (selectedChecks.length === 0 && labelDateVal && labelDateVal.length === 8) {
+      fileSuffix = labelDateVal;
+    } else {
+      fileSuffix = Date.now();
+    }
+
+    XLSX.writeFile(wb, `labels_${fileSuffix}.xlsx`);
+  });
+
+   // 批量导入 samples（从 .xlsx 文件），支持自动生成 sample_id
+  document.getElementById('btn-import-samples').addEventListener('click', () => {
+    if (!db) {
+      alert('Database not ready.');
+      return;
+    }
+    const fileInput = document.getElementById('import-file');
+    const file = fileInput.files[0];
+    if (!file) {
+      alert('请先选择一个 .xlsx 文件。');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+      if (!rows || rows.length === 0) {
+        alert('表格中没有数据。');
+        return;
+      }
+
+      let imported = 0;
+      let skippedNoId = 0;      // sample_id 为空且 date 无法用于自动生成
+      let skippedDuplicate = 0; // 与已有 sample_id 冲突
+      let otherErrors = 0;
+      let missingTemp = 0;
+      let missingFreezer = 0;
+      let missingRack = 0;
+      let missingBoxLabel = 0;
+
+      // 按日期缓存“下一流水号”
+      const nextSeqByDate = {};
+
+      db.run('BEGIN TRANSACTION;');
+
+      try {
+        rows.forEach(r => {
+          let sample_id = cellToString(r.sample_id);
+          const date = cellToString(r.date);
+
+          // 如果 Excel 里没给 sample_id，则尝试根据 date 自动生成
+          if (!sample_id) {
+            if (!date || date.length !== 8) {
+              // 没有 sample_id 且 date 无法用于自动生成：跳过
+              skippedNoId++;
+              return;
+            }
+
+            // 查看这个 date 的下一个序号是多少（第一次用时查库）
+            if (nextSeqByDate[date] === undefined) {
+              const existing = queryAll(
+                `SELECT sample_id
+                 FROM samples
+                 WHERE date = ?
+                 ORDER BY sample_id DESC
+                 LIMIT 1;`,
+                [date]
+              );
+              let baseSeq = 0;
+              if (existing.length > 0 && existing[0].sample_id) {
+                baseSeq = parseSeqFromSampleId(existing[0].sample_id);
+              }
+              nextSeqByDate[date] = baseSeq + 1;
+            }
+
+            const seq = nextSeqByDate[date];
+            const seqStr = String(seq).padStart(3, '0');
+            sample_id = `${date}-${seqStr}`;
+            nextSeqByDate[date] = seq + 1;
+          }
+
+          const experiment_label = cellToString(r.experiment_label);
+          const species_genotype = cellToString(r.species_genotype);
+          const model = cellToString(r.model);
+          const tissue = cellToString(r.tissue);
+          const sample_type = cellToString(r.sample_type);
+          const notes = cellToString(r.notes);
+          const processing = cellToString(r.processing);
+          const parent_sample_id = cellToString(r.parent_sample_id);
+          const amount = cellToString(r.amount);
+          const project = cellToString(r.project);
+          const status = cellToString(r.status) || 'available';
+
+          const storage_temperature = cellToString(r.storage_temperature);
+            const freezer_no = cellToString(r.freezer_no);
+            const rack = cellToString(r.rack);
+            const box_label = cellToString(r.box_label);
+
+            // 统计缺失情况（只要有任何 storage 字段被填，就认为这一行“期望有冷冻位置信息”）
+            const hasAnyStorage =
+            storage_temperature || freezer_no || rack || box_label;
+
+            if (hasAnyStorage) {
+            if (!storage_temperature) missingTemp++;
+            if (!freezer_no) missingFreezer++;
+            if (!rack) missingRack++;
+            if (!box_label) missingBoxLabel++;
+            }
+
+            let boxId = null;
+
+            // 只要有 box_label，就建立/复用一个 box（其它字段缺失也没关系）
+            if (box_label) {
+            const existingBox = queryAll(
+                `SELECT id FROM boxes
+                WHERE storage_temperature = ? AND freezer_no = ? AND rack = ? AND box_label = ?
+                LIMIT 1`,
+                [storage_temperature || '', freezer_no || '', rack || '', box_label]
+            );
+            if (existingBox.length > 0) {
+                boxId = existingBox[0].id;
+            } else {
+                const insertBoxStmt = db.prepare(`
+                INSERT INTO boxes (storage_temperature, freezer_no, rack, box_label)
+                VALUES (?, ?, ?, ?);
+                `);
+                insertBoxStmt.run([
+                storage_temperature || '',
+                freezer_no || '',
+                rack || '',
+                box_label
+                ]);
+                insertBoxStmt.free();
+                const row = queryAll('SELECT last_insert_rowid() AS id;')[0];
+                boxId = row.id;
+            }
+            }
+            // 如果没有 box_label：boxId 保持为 null，但样本仍然会插入
+
+          // 插入样本记录
+          try {
+            const insertStmt = db.prepare(`
+              INSERT INTO samples
+                (sample_id, date, experiment_label, species_genotype, model, tissue, sample_type, notes,
+                 processing, parent_sample_id, amount, project, status, box_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            `);
+            insertStmt.run([
+              sample_id || null,
+              date || null,
+              experiment_label || null,
+              species_genotype || null,
+              model || null,
+              tissue || null,
+              sample_type || null,
+              notes || null,
+              processing || null,
+              parent_sample_id || null,
+              amount || null,
+              project || null,
+              status || null,
+              boxId
+            ]);
+            insertStmt.free();
+            imported++;
+          } catch (err) {
+            const msg = String(err);
+            if (msg.includes('UNIQUE constraint failed: samples.sample_id')) {
+              skippedDuplicate++;
+            } else {
+              console.error('Error inserting row', sample_id, err);
+              otherErrors++;
+            }
+          }
+        });
+
+        db.run('COMMIT;');
+      } catch (e2) {
+        console.error('Import failed, rolling back.', e2);
+        db.run('ROLLBACK;');
+        alert('导入过程中出现错误，已回滚。请检查控制台错误信息。');
+        return;
+      }
+
+      refreshAllViews();
+
+      if (imported > 0) {
+        dbDirty = true; // 导入了新样本，还没导出
+      }
+
+      let summary = `导入完成：\n成功导入 ${imported} 条样本。`;
+      if (skippedNoId > 0) summary += `\n跳过 ${skippedNoId} 行（sample_id 为空且 date 不合法，无法自动生成）。`;
+      if (skippedDuplicate > 0) summary += `\n跳过 ${skippedDuplicate} 行（sample_id 已存在）。`;
+      if (otherErrors > 0) summary += `\n有 ${otherErrors} 行插入失败（其他错误，详见控制台）。`;
+      if (missingTemp > 0 || missingFreezer > 0 || missingRack > 0 || missingBoxLabel > 0) {
+        summary += `\n\n存储信息缺失统计（仅对填写过任一 storage 字段的行）：`;
+        if (missingTemp > 0) summary += `\n- 缺少 storage_temperature 的行数：${missingTemp}`;
+        if (missingFreezer > 0) summary += `\n- 缺少 freezer_no 的行数：${missingFreezer}`;
+        if (missingRack > 0) summary += `\n- 缺少 rack 的行数：${missingRack}`;
+        if (missingBoxLabel > 0) summary += `\n- 缺少 box_label 的行数：${missingBoxLabel}`;
+}
+      alert(summary);
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+
+  // 在关闭 / 刷新页面前，如果有未导出的更改，提示用户
+  window.addEventListener('beforeunload', function (e) {
+    // 如果没有数据库 or 没有未保存修改，就不拦截
+    if (!db || !dbDirty) return;
+
+    // 有未保存修改：阻止默认行为并设置 returnValue
+    e.preventDefault();
+    // 某些浏览器会忽略自定义文本，但设了 returnValue 才会弹出提示框
+    e.returnValue = 'You have unsaved changes in the sample database. If you leave now, new or edited samples will be lost unless you have exported the DB.';
+
+    // 不需要 return 任何值，现代浏览器会使用默认提示语
+  });
+
+</script>
+
+</body>
+</html>
