@@ -304,6 +304,7 @@
     border-collapse: collapse;
     table-layout: fixed;        /* 阻止长文本撑宽整列，让列更均匀 */
     font-size: 12px;
+    margin-top: 8px;
     }
 
     /* Archived 也一样 */
@@ -451,7 +452,7 @@
         <input type="file" id="file-input" accept=".sqlite,.db,.sqlite3" style="width:auto;">
       </label>
 
-      <button id="btn-export-db">Download current DB (.sqlite)</button>
+      <button id="btn-export-db">Save Master DB (.sqlite)</button>
       <!--手动备份--> 
       <button id="btn-backup-db">Backup DB</button>
     </div>
@@ -486,33 +487,18 @@
         <div style="flex:1; min-width:220px;">
             <label>Sample ID</label>
             <div class="flex">
-                <input
-                type="text"
-                id="sample_id"
-                required
-                style="flex:1; min-width:140px;"
-                placeholder="可手动填，或用 Auto 生成"
-            >
+                <input type="text" id="sample_id" required="" style="flex:1; min-width:140px;" placeholder="Manual，or Auto Generated">
             <button type="button" id="btn-generate-id">Auto</button>
             </div>
         </div>
         <div style="flex:1; min-width:140px;">
             <label>Date (YYYYMMDD)
-                <input
-                type="text"
-                id="date"
-                placeholder="例如：20250213"
-                maxlength="8"
-            >
+                <input type="text" id="date" placeholder="e.g. 20250213" maxlength="8">
             </label>
         </div>
         <div style="flex:1; min-width:120px;">
             <label>Experiment label
-                <input
-                type="text"
-                id="experiment_label"
-                placeholder="例如：1# / A1 / 2R"
-            >
+                <input type="text" id="experiment_label" placeholder="e.g. 1# / A1 / 2R">
             </label>
         </div>
         <div style="flex:1; min-width:180px;">
@@ -648,6 +634,7 @@
         <button id="btn-export-xlsx">Export all (.xlsx)</button>
         <button id="btn-export-labels-xlsx">Export labels (.xlsx)</button>
         <button id="btn-open-secondary-wizard">Secondary wizard</button>
+        <button id="btn-batch-edit">Batch edit selected</button>
       </div>
       <div style="margin-left:auto;">
         <button id="btn-archive-selected">Archive selected</button>
@@ -768,27 +755,14 @@
         <div class="wizard-step-title">Step 3 · Naming rule</div>
         <div class="wizard-step-body">
           <label class="wizard-naming-option">
-            <input
-              type="radio"
-              name="wizard-naming-rule"
-              value="parent-type"
-              checked
-            >
+            <input type="radio" name="wizard-naming-rule" value="parent-type" checked="">
             <span>ParentID-TYPE (e.g. 20250213-001-RNA)</span>
           </label>
 
           <label class="wizard-naming-option">
-            <input
-              type="radio"
-              name="wizard-naming-rule"
-              value="custom"
-            >
+            <input type="radio" name="wizard-naming-rule" value="custom">
             <span>Custom template:</span>
-            <input
-              type="text"
-              id="wizard-custom-template"
-              placeholder="{parent}-{type}"
-            >
+            <input type="text" id="wizard-custom-template" placeholder="{parent}-{type}">
           </label>
 
           <div class="small" style="margin-top:4px;">
@@ -816,12 +790,127 @@
 
     </div>
   </div>
+
+
+    <!-- Batch Edit Modal -->
+  <div id="batch-edit-backdrop" class="modal-backdrop hidden">
+    <div class="wizard-modal">
+      <div class="wizard-header">
+        <div class="wizard-title">Batch edit samples</div>
+        <button type="button" id="batch-edit-close" class="wizard-close-btn">×</button>
+      </div>
+      <div style="padding:10px 12px; font-size:13px;">
+        <div class="small" style="margin-bottom:8px;">
+          Editing <span id="batch-edit-count">0</span> samples. No edit will be made on empty field.
+        </div>
+
+        <div class="flex">
+            <div style="flex:1; min-width:160px;">
+                <label>Project
+                <input type="text" id="batch-project">
+                </label>
+            </div>
+            <div style="flex:1; min-width:160px;">
+                <label>Notes
+                <input type="text" id="batch-notes" placeholder="备注（可选）">
+                </label>
+            </div>
+        </div>
+
+        <label style="margin-top:8px;">Processing
+          <input type="text" id="batch-processing" placeholder="e.g. +TRIzol">
+        </label>
+
+        <div class="flex" style="margin-top:8px;">
+          <div style="flex:1; min-width:120px;">
+            <label>Storage Temperature
+              <input type="text" id="batch-storage-temperature" placeholder="-80 / -20 / LN2">
+            </label>
+          </div>
+          <div style="flex:1; min-width:120px;">
+            <label>Freezer No.
+              <input type="text" id="batch-freezer-no">
+            </label>
+          </div>
+        </div>
+
+        <div class="flex" style="margin-top:8px;">
+          <div style="flex:1; min-width:120px;">
+            <label>Rack
+              <input type="text" id="batch-rack">
+            </label>
+          </div>
+          <div style="flex:1; min-width:160px;">
+            <label>Box Label
+              <input type="text" id="batch-box-label">
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <label>Status (optional)
+            <select id="batch-status">
+              <option value="">(no change)</option>
+              <option value="available">available</option>
+              <option value="low">low volume</option>
+              <option value="retired">retired</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- 高危字段开关 -->
+        <div style="margin-top:10px;">
+        <button type="button" id="batch-adv-toggle" style="font-size:12px; padding:2px 6px;">
+            ⚠️ Important information (click to edit only if necessary)
+        </button>
+        </div>
+
+        <!-- 默认隐藏的重要信息区 -->
+        <div id="batch-advanced-section" style="margin-top:8px; padding-top:6px; border-top:1px dashed #d1d5db; display:none; font-size:12px;">
+        <div class="small" style="color:#b91c1c; margin-bottom:4px;">
+            These fields affect biological meaning of samples. Do not edit unless you are sure.
+        </div>
+
+        <div class="flex">
+            <div style="flex:1; min-width:140px; margin-right:8px;">
+            <label>Species / Genotype
+                <input type="text" id="batch-species-genotype" placeholder="(no change)">
+            </label>
+            </div>
+            <div style="flex:1; min-width:140px;">
+            <label>Model
+                <input type="text" id="batch-model" placeholder="(no change)">
+            </label>
+            </div>
+        </div>
+
+        <div class="flex" style="margin-top:6px;">
+            <div style="flex:1; min-width:140px; margin-right:8px;">
+            <label>Tissue
+                <input type="text" id="batch-tissue" placeholder="(no change)">
+            </label>
+            </div>
+            <div style="flex:1; min-width:140px;">
+            <label>Sample type
+                <input type="text" id="batch-sample-type" placeholder="(no change)">
+            </label>
+            </div>
+        </div>
+        </div>
+
+        <div class="wizard-footer">
+          <button type="button" id="batch-edit-cancel">Cancel</button>
+          <button type="button" id="batch-edit-apply">Apply to selected</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </main>
 
 <!-- sql.js (SQLite in WebAssembly) -->
-<script src="sql-wasm.js"></script>
+<script src="file:///private/var/folders/cx/vfjpnww56wq70_t993yyxshc0000gn/T/remote-file-preview-8BB1CA61-D5DD-40EB-B2B7-49AC5229651A/sql-wasm.js"></script>
 <!-- SheetJS for Excel export (you need to include xlsx.full.min.js) -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="./Local Sample Manager (SQLite)_files/xlsx.full.min.js"></script>
 
 <script>
   let SQL;
@@ -934,8 +1023,8 @@
     const blob = new Blob([binaryArray], { type: 'application/x-sqlite3' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const filename = `sample_db_${ts}.sqlite`;
+
+    const filename = `sample_db_Master.sqlite`;
 
     a.href = url;
     a.download = filename;
@@ -2229,6 +2318,188 @@
     });
   }
 
+
+    // ===== Batch edit selected samples =====
+  const batchBackdrop = document.getElementById('batch-edit-backdrop');
+
+  function closeBatchEdit() {
+    if (!batchBackdrop) return;
+    batchBackdrop.classList.add('hidden');
+    batchBackdrop.style.display = 'none';
+  }
+
+  const btnBatchEdit = document.getElementById('btn-batch-edit');
+  if (btnBatchEdit && batchBackdrop) {
+    btnBatchEdit.addEventListener('click', () => {
+      if (!db) {
+        alert('Database not ready.');
+        return;
+      }
+      const checked = Array.from(document.querySelectorAll('.sample-select:checked'));
+      if (checked.length === 0) {
+        alert('No samples selected.');
+        return;
+      }
+      const countSpan = document.getElementById('batch-edit-count');
+      if (countSpan) countSpan.textContent = String(checked.length);
+
+      // 清空输入
+        [
+        'batch-project','batch-notes','batch-processing',
+        'batch-storage-temperature','batch-freezer-no','batch-rack','batch-box-label',
+        'batch-species-genotype','batch-model','batch-tissue','batch-sample-type'
+        ].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const stSel = document.getElementById('batch-status');
+        if (stSel) stSel.value = '';
+
+        const advSec = document.getElementById('batch-advanced-section');
+       if (advSec) advSec.style.display = 'none';
+
+      batchBackdrop.classList.remove('hidden');
+      batchBackdrop.style.display = 'flex';
+    });
+  }
+
+  const btnBatchCancel = document.getElementById('batch-edit-cancel');
+  if (btnBatchCancel) {
+    btnBatchCancel.addEventListener('click', closeBatchEdit);
+  }
+  const btnBatchClose = document.getElementById('batch-edit-close');
+  if (btnBatchClose) {
+    btnBatchClose.addEventListener('click', closeBatchEdit);
+  }
+
+    const advToggle = document.getElementById('batch-adv-toggle');
+    if (advToggle) {
+    advToggle.addEventListener('click', () => {
+        const sec = document.getElementById('batch-advanced-section');
+        if (!sec) return;
+        sec.style.display = (sec.style.display === 'none' || !sec.style.display)
+        ? 'block'
+        : 'none';
+    });
+    }
+
+  const btnBatchApply = document.getElementById('batch-edit-apply');
+  if (btnBatchApply && batchBackdrop) {
+    btnBatchApply.addEventListener('click', () => {
+      if (!db) return;
+
+      const checked = Array.from(document.querySelectorAll('.sample-select:checked'));
+      if (checked.length === 0) {
+        alert('No samples selected.');
+        closeBatchEdit();
+        return;
+      }
+
+      const projValRaw   = (document.getElementById('batch-project').value || '').trim();
+        const notesValRaw  = (document.getElementById('batch-notes').value || '').trim();
+        const procValRaw   = (document.getElementById('batch-processing').value || '').trim();
+        const statusRaw    = document.getElementById('batch-status').value || '';
+
+        const tempRaw      = (document.getElementById('batch-storage-temperature').value || '').trim();
+        const freezerRaw   = (document.getElementById('batch-freezer-no').value || '').trim();
+        const rackRaw      = (document.getElementById('batch-rack').value || '').trim();
+        const boxLabelRaw  = (document.getElementById('batch-box-label').value || '').trim();
+
+        const speciesRaw   = (document.getElementById('batch-species-genotype').value || '').trim();
+        const modelRaw     = (document.getElementById('batch-model').value || '').trim();
+        const tissueRaw    = (document.getElementById('batch-tissue').value || '').trim();
+        const typeRaw      = (document.getElementById('batch-sample-type').value || '').trim();
+
+        const projVal    = projValRaw   || null;
+        const notesVal   = notesValRaw  || null;
+        const procVal    = procValRaw   || null;
+        const statusVal  = statusRaw    || null;
+        const speciesVal = speciesRaw   || null;
+        const modelVal   = modelRaw     || null;
+        const tissueVal  = tissueRaw    || null;
+        const typeVal    = typeRaw      || null;
+
+        const hasAnyChange =
+            projVal || notesVal || procVal || statusVal ||
+            tempRaw || freezerRaw || rackRaw || boxLabelRaw ||
+            speciesVal || modelVal || tissueVal || typeVal;
+
+      if (!hasAnyChange) {
+        alert('No new values provided.');
+        return;
+      }
+
+      // 统一 box：如果填写了 storage + box_label，就为这批样本建立/复用同一个盒子
+      let boxId = null;
+      const hasAnyStorage = tempRaw || freezerRaw || rackRaw || boxLabelRaw;
+      if (hasAnyStorage && boxLabelRaw) {
+        const existing = queryAll(
+          `SELECT id FROM boxes
+           WHERE storage_temperature = ? AND freezer_no = ? AND rack = ? AND box_label = ?
+           LIMIT 1`,
+          [tempRaw || '', freezerRaw || '', rackRaw || '', boxLabelRaw]
+        );
+        if (existing.length > 0) {
+          boxId = existing[0].id;
+        } else {
+          const insertBoxStmt = db.prepare(`
+            INSERT INTO boxes (storage_temperature, freezer_no, rack, box_label)
+            VALUES (?, ?, ?, ?);
+          `);
+          insertBoxStmt.run([
+            tempRaw || '',
+            freezerRaw || '',
+            rackRaw || '',
+            boxLabelRaw
+          ]);
+          insertBoxStmt.free();
+          const row = queryAll('SELECT last_insert_rowid() AS id;')[0];
+          boxId = row.id;
+        }
+      }
+
+      db.run('BEGIN TRANSACTION;');
+      const stmt = db.prepare(`
+        UPDATE samples SET
+            project          = COALESCE(?, project),
+            notes            = COALESCE(?, notes),
+            processing       = COALESCE(?, processing),
+            status           = COALESCE(?, status),
+            species_genotype = COALESCE(?, species_genotype),
+            model            = COALESCE(?, model),
+            tissue           = COALESCE(?, tissue),
+            sample_type      = COALESCE(?, sample_type),
+            box_id           = COALESCE(?, box_id),
+            updated_at       = datetime('now')
+        WHERE id = ?;
+        `);
+
+      checked.forEach(cb => {
+        const id = parseInt(cb.getAttribute('data-id'), 10);
+        if (!Number.isFinite(id)) return;
+        stmt.run([
+          projVal,
+          notesVal,
+          procVal,
+          statusVal,
+          speciesVal,
+          modelVal,
+          tissueVal,
+          typeVal,
+          boxId,
+          id
+        ]);
+      });
+
+      stmt.free();
+      db.run('COMMIT;');
+      dbDirty = true;
+      closeBatchEdit();
+      refreshAllViews();
+    });
+  }
+
+
   // 批量操作：active samples
   const btnArchiveSelected = document.getElementById('btn-archive-selected');
   if (btnArchiveSelected) {
@@ -2332,6 +2603,13 @@
         const newState = target.checked;
 
         for (let i = start; i <= end; i++) {
+            const cb = checkboxes[i];
+            cb.checked = newState;
+            
+            const tr = cb.closest('tr');
+            if(tr){
+                tr.classList.toggle('row-selected', newState)
+            }
             checkboxes[i].checked = newState;
         }
         }
@@ -2850,5 +3128,5 @@ document.getElementById('btn-generate-secondary').addEventListener('click', asyn
 
 </script>
 
-</body>
-</html>
+
+</body></html>
