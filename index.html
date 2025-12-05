@@ -1177,6 +1177,17 @@
       lastSyncedVersion = currentVersion;
       localStorage.setItem('LIMS_LAST_SYNC_VERSION', String(lastSyncedVersion));
 
+      // --- 更新浏览器缓存，让下次自动加载的是最新版 ---
+      try {
+          const binaryArray = db.export();   // 当前最新 DB
+          const base64New = uint8ToBase64(binaryArray);
+          localStorage.setItem(LAST_DB_KEY, base64New);
+          localStorage.setItem(LAST_DB_NAME_KEY, 'sample_db_Master.sqlite');
+          console.log('Local cache updated after Sync → R2');
+      } catch (e) {
+          console.error('Failed updating localStorage after sync', e);
+      }
+
       const statusEl = document.getElementById('db-status');
       if (statusEl) statusEl.textContent = `Synced to R2 (v${currentVersion})`;
       console.log('Synced to R2, version', currentVersion);
