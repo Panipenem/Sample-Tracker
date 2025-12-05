@@ -10,7 +10,7 @@
     main { padding: 16px; }
     h1 { margin: 0; font-size: 20px; }
     h2 { margin-top: 24px; font-size: 18px; }
-    .section { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+    .section { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;}
     label { display: block; margin-top: 8px; font-size: 13px; }
     input, select, textarea { width: 100%; box-sizing: border-box; padding: 4px 6px; font-size: 13px; margin-top: 2px; }
     /* 复选框 / 单选按钮不要占满整行宽度，避免把文字挤到下一行 */
@@ -429,6 +429,57 @@
         margin-top: 0;
         margin-bottom: 0;
     }
+    
+    
+    .db-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .db-file-label {
+      display: flex;
+      align-items: center;
+      white-space: nowrap; /* 不换行文字，不影响 input 高度 */
+      gap: 8px;
+    }
+
+    .db-file-label input[type="file"] {
+      font-size: 14px;     /* 防止 UI 撑高 */
+      padding: 2px 0;      /* 保持跟文字一样的高度 */
+    }
+
+    /* Import samples UI */
+    .import-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 8px 10px;
+      margin-bottom: 16px;
+      border-radius: 6px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .import-row label {
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      flex-direction: row;
+      gap: 4px;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .import-row input[type="file"] {
+      padding: 4px;
+      font-size: 12px;
+    }
+    .import-row button {
+      margin-top: 0;
+      white-space: nowrap;
+    }
 
 
 
@@ -442,32 +493,31 @@
 
 <main>
   <!-- Database controls -->
-  <div class="section">
+  <div class="section" id="db-section">
     <h2>Database</h2>
-    <div class="flex">
+
+    <!-- Row 1: local DB operations -->
+    <div class="db-row">
       <button id="btn-new-db">New in-memory DB</button>
 
-      <label style="width:auto;">
+      <label class="db-file-label">
         Load .sqlite file:
-        <input type="file" id="file-input" accept=".sqlite,.db,.sqlite3" style="width:auto;">
+        <input type="file" id="file-input" accept=".sqlite">
       </label>
+    </div>
 
+    <!-- Row 2: remote sync + backup -->
+    <div class="db-row">
+      <button id="btn-load-r2">Load ← R2</button>
+      <button id="btn-save-r2">Sync → R2</button>
       <button id="btn-export-db">Save Master DB (.sqlite)</button>
-      <!--手动备份--> 
       <button id="btn-backup-db">Backup DB</button>
     </div>
 
-        <!-- 新增：Excel 导入控件 -->
-    <div class="flex" style="margin-top:8px;">
-      <label style="width:auto;">
-        Import samples (.xlsx):
-        <input type="file" id="import-file" accept=".xlsx,.xls" style="width:auto;">
-      </label>
-      <button id="btn-import-samples">Import samples</button>
-    </div>
-
-    <div id="db-status" class="small" style="margin-top:6px;color:#10b981;">
-      DB not initialized.
+    <!-- Status line -->
+    <div style="font-size:14px; margin-top:4px;">
+      <span id="db-status" style="color:#008000;"></span><br>
+      <span id="db-version" style="color:#1a0dab; cursor:pointer;"></span>
     </div>
   </div>
 
@@ -481,6 +531,17 @@
 
   <!-- Sample form -->
   <div class="section" id="section-form">
+    
+    <!-- Batch import samples -->
+    <div class="import-row">
+      <label style="display:flex; align-items:center; gap:8px; margin:0;">
+        Import samples (.xlsx):
+        <input type="file" id="import-samples-file" accept=".xlsx" style="margin:0;">
+      </label>
+
+      <button id="btn-import-samples">Import samples</button>
+    </div> 
+    
     <h2>Add / Edit Sample</h2>
     <form id="sample-form">
       <div class="flex">
@@ -916,6 +977,14 @@
   let SQL;
   let db = null; // SQLite database instance
   let dbDirty = false // unsaved edit 
+  let currentVersion = 0;  // 放在全局变量区
+  let lastSyncedVersion = 0;
+
+  const R2_API_BASE = 'https://lims-r2-api.zhanghch0814.workers.dev'; // 比如 https://lims-r2-api.xxx.workers.dev
+  const R2_WRITE_TOKEN = 'LIMS-SAMPLE-MANAGER-SQL-2025'; // 和 Worker 里的 LIMS_WRITE_TOKEN 一致
+
+  window.R2_API_BASE = R2_API_BASE;
+  window.R2_WRITE_TOKEN = R2_WRITE_TOKEN;
 
   // ==== LocalStorage keys, 用于缓存最近的 DB ====
   const LAST_DB_KEY = 'sampleApp.lastDbBase64';
@@ -940,6 +1009,22 @@
     return u8;
   }
 
+  function refreshDbStatus() {
+    const statusEl = document.getElementById('db-status-line');
+    const badgeEl = document.getElementById('version-badge');
+
+    if (!statusEl || !badgeEl) return;
+
+    // 状态文本
+    const name = localStorage.getItem(LAST_DB_NAME_KEY) || '(no name)';
+    statusEl.textContent = `Loaded DB: ${name}`;
+
+    // badge
+    const v = currentVersion || '?';
+    const synced = (lastSyncedVersion === currentVersion && !dbDirty);
+    badgeEl.textContent = `DB v${v} • ${synced ? 'synced' : 'local changes'}`;
+  }
+
   // ==== 尝试自动加载上一次缓存的 DB ====
   function tryAutoLoadLastDb() {
     // 仅在 sql.js 已加载、且目前还没有 db 实例时尝试
@@ -958,7 +1043,7 @@
       const name = localStorage.getItem(LAST_DB_NAME_KEY) || '(cached DB)';
       const statusEl = document.getElementById('db-status');
       if (statusEl) {
-        statusEl.textContent = 'Automatically loaded last DB: ' + name + ' (from browser cache)';
+        statusEl.textContent = 'Loaded cached DB: ' + name;
       }
       console.log('Auto-loaded last DB from localStorage:', name);
     } catch (e) {
@@ -984,7 +1069,7 @@
     dbDirty = false;
     initSchema();
     refreshAllViews();
-    document.getElementById('db-status').textContent = 'New in-memory DB created.';
+    document.getElementById('db-status').textContent = 'New empty in-memory DB.';
   });
 
   // Load DB from file
@@ -999,7 +1084,7 @@
     dbDirty = false;
     initSchema(); // in case old DB has no schema
     refreshAllViews();
-    document.getElementById('db-status').textContent = 'Loaded DB: ' + file.name;
+    refreshDbStatus();
 
     // 将当前 DB 缓存到 localStorage，供下次自动加载使用
     try {
@@ -1044,6 +1129,119 @@
       console.error('Failed to update cached DB after export', e);
     }
   });
+
+  // --- Cloudflare R2 helpers (via Worker) ---
+
+  // 把当前 db 推送到 R2
+  async function saveDbToR2() {
+    if (!db) {
+      alert('No database loaded.');
+      return;
+    }
+    if (!R2_API_BASE) {
+      alert('R2_API_BASE 未配置');
+      return;
+    }
+
+    // 1) 同步前 bump 版本号
+    currentVersion = (currentVersion || 0) + 1;
+    setMeta('version', currentVersion);
+    setMeta('updated_at', new Date().toISOString());
+    updateVersionBadge();
+
+    // 2) 导出 DB
+    const binaryArray = db.export();
+    const base64 = uint8ToBase64(binaryArray);
+
+    try {
+      const resp = await fetch(`${R2_API_BASE}/db`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-LIMS-TOKEN': R2_WRITE_TOKEN || ''
+        },
+        body: JSON.stringify({
+          dbName: 'sample_db_Master.sqlite',
+          dbBase64: base64
+        })
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        console.error('R2 save failed', resp.status, txt);
+        alert('Sync to R2 failed: ' + resp.status);
+        return;
+      }
+
+      dbDirty = false;
+      lastSyncedVersion = currentVersion;
+      localStorage.setItem('LIMS_LAST_SYNC_VERSION', String(lastSyncedVersion));
+
+      const statusEl = document.getElementById('db-status');
+      if (statusEl) statusEl.textContent = `Synced to R2 (v${currentVersion})`;
+      console.log('Synced to R2, version', currentVersion);
+    } catch (err) {
+      console.error('Error saving DB to R2:', err);
+      alert('Error saving DB to R2, see console.');
+    }
+}
+
+  // 从 R2 拉取 db 并加载
+  async function loadDbFromR2() {
+  if (!R2_API_BASE) {
+    alert('R2_API_BASE 未配置');
+    return;
+  }
+  if (!SQL) {
+    alert('sql.js not ready yet.');
+    return;
+  }
+
+  // 如果本地有未保存修改，先提醒一下（软冲突）
+  if (dbDirty) {
+    const ok = confirm(
+      'There are unsaved local changes. Loading from R2 will overwrite the current DB. Continue?'
+    );
+    if (!ok) return;
+  }
+
+  try {
+    const resp = await fetch(`${R2_API_BASE}/db`, { method: 'GET' });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      console.error('R2 load failed', resp.status, txt);
+      alert('Load from R2 failed: ' + resp.status);
+      return;
+    }
+
+    const data = await resp.json();
+    if (!data || !data.dbBase64) {
+      alert('R2 DB is empty or invalid.');
+      return;
+    }
+
+    const u8 = base64ToUint8(data.dbBase64);
+    db = new SQL.Database(u8);
+    dbDirty = false;
+
+    initSchema();   // 这里会重新调用 getMeta/version
+
+    // 从 meta 里再读一下版本（以防没有 init 时被覆盖）
+    const vStr = getMeta('version', '1');
+    currentVersion = parseInt(vStr, 10) || 1;
+    lastSyncedVersion = currentVersion;
+    localStorage.setItem('LIMS_LAST_SYNC_VERSION', String(lastSyncedVersion));
+
+    refreshAllViews();
+    updateVersionBadge();
+
+    const statusEl = document.getElementById('db-status');
+    if (statusEl) statusEl.textContent = `Loaded DB from R2 (v${currentVersion})`;
+  } catch (err) {
+    console.error('Error loading DB from R2:', err);
+    alert('Error loading DB from R2, see console.');
+  }
+}
 
     // ==== 手动备份当前 DB（导出一份带时间戳的 .sqlite）====
   function backupDbNow() {
@@ -1125,6 +1323,32 @@
         FOREIGN KEY (box_id) REFERENCES boxes(id)
       );
     `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS meta (
+        key   TEXT PRIMARY KEY,
+        value TEXT
+      );
+    `);
+
+    // 初始化版本信息
+    let v = parseInt(getMeta('version', '0'), 10);
+    if (Number.isNaN(v) || v < 1) {
+      v = 1;
+      setMeta('version', v);
+      setMeta('updated_at', new Date().toISOString());
+    }
+    currentVersion = v;
+
+    // 从 localStorage 恢复最后一次同步的版本（可选）
+    const ls = localStorage.getItem('LIMS_LAST_SYNC_VERSION');
+    if (ls) {
+      lastSyncedVersion = parseInt(ls, 10) || 0;
+    } else {
+      lastSyncedVersion = 0;
+    }
+
+    updateVersionBadge();   // 更新 UI（后面会写）
   }
 
   // Helpers for running SELECT
@@ -1151,6 +1375,11 @@
     if (!sampleId) return 0;
     const m = String(sampleId).match(/(\d{3})$/);
     return m ? parseInt(m[1], 10) : 0;
+  }
+
+  function makeDbDirty(){
+    dbDirty = true;
+    updateVersionBadge();
   }
 
   // Save sample form
@@ -1291,7 +1520,7 @@
     }
 
     db.run('COMMIT;');
-    dbDirty = true;
+    makeDbDirty();
 
     resetForm();
     refreshAllViews();
@@ -1452,8 +1681,9 @@
         stmt.run(['archived', id]);
         stmt.free();
 
-        dbDirty = true;
+        makeDbDirty();
         refreshAllViews();
+
       });
     });
 
@@ -1472,7 +1702,7 @@
         stmt.run([id]);
         stmt.free();
 
-        dbDirty = true;
+        makeDbDirty();
         refreshAllViews();
       });
     });
@@ -1606,6 +1836,50 @@
     document.getElementById('rack').value = s.rack || '';
     document.getElementById('box_label').value = s.box_label || '';
   }
+
+  function updateVersionBadge() {
+    const el = document.getElementById('db-version');
+    if (!el) return;
+
+    const v = currentVersion || '?';
+    const last = lastSyncedVersion || 0;
+    // 简单展示：v 和是否已同步
+    const syncedMark = (last === v && !dbDirty) ? 'synced' : 'local changes';
+    el.textContent = `DB v${v} · ${syncedMark}`;
+  }
+
+  function getMeta(key, defaultValue = null) {
+  try {
+    const stmt = db.prepare('SELECT value FROM meta WHERE key = ?');
+    stmt.bind([key]);
+    if (stmt.step()) {
+      const v = stmt.get()[0];
+      stmt.free();
+      return v;
+    }
+    stmt.free();
+  } catch (e) {
+    console.error('getMeta error', e);
+  }
+  return defaultValue;
+}
+
+  function setMeta(key, value) {
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO meta (key, value)
+        VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      `);
+      stmt.bind([key, String(value)]);
+      stmt.step();
+      stmt.free();
+    } catch (e) {
+      console.error('setMeta error', e);
+    }
+  }
+
+
 
     // ===== Secondary Sample Wizard =====
 
@@ -2005,7 +2279,7 @@
 
       insertStmt.free();
       db.run('COMMIT;');
-      dbDirty = true;
+      makeDbDirty();
       refreshAllViews();
       closeWizard();
       alert('Secondary samples generated.');
@@ -2493,7 +2767,7 @@
 
       stmt.free();
       db.run('COMMIT;');
-      dbDirty = true;
+      makeDbDirty();
       closeBatchEdit();
       refreshAllViews();
     });
@@ -2517,7 +2791,7 @@
         stmt.run(['archived', id]);
       });
       stmt.free();
-      dbDirty = true;
+      makeDbDirty();
       refreshAllViews();
     });
   }
@@ -2538,7 +2812,7 @@
         stmt.run([id]);
       });
       stmt.free();
-      dbDirty = true;
+      makeDbDirty();
       refreshAllViews();
     });
   }
@@ -2560,8 +2834,9 @@
         stmt.run([null, id]);   // 置为 NULL，相当于“未标明状态”
       });
       stmt.free();
-      dbDirty = true;
+      makeDbDirty();
       refreshAllViews();
+
     });
   }
 
@@ -2581,7 +2856,7 @@
         stmt.run([id]);
       });
       stmt.free();
-      dbDirty = true;
+      makeDbDirty();
       refreshAllViews();
     });
   }
@@ -2669,77 +2944,6 @@
   if (btnGenerateId) {
     btnGenerateId.addEventListener('click', generateSampleIdFromDate);
   }
-
-  // ---- Generate secondary samples from selected primary samples ----
-document.getElementById('btn-generate-secondary').addEventListener('click', async () => {
-  if (!db) return;
-
-  const selected = Array.from(document.querySelectorAll('.sample-select:checked'));
-  if (selected.length === 0) {
-    alert('Please select at least one primary sample.');
-    return;
-  }
-
-  const sampleType = prompt("Enter secondary sample type (e.g., RNA / DNA / Protein / Lysate):");
-  if (!sampleType) return;
-
-  const processing = prompt("Enter processing method (e.g., +TRIzol / +lysis buffer):", "");
-
-  for (const cb of selected) {
-    const id = parseInt(cb.getAttribute('data-id'), 10);
-
-    // 获取一次样本的所有信息
-    const row = queryAll(`
-      SELECT *
-      FROM samples
-      WHERE id = ?
-    `, [id])[0];
-
-    if (!row) continue;
-
-    const parentId = row.id;
-
-    // 获取当前日期 YYYYMMDD
-    const now = new Date();
-    const currentDate = now.getFullYear().toString() +
-                        String(now.getMonth() + 1).padStart(2, '0') +
-                        String(now.getDate()).padStart(2, '0');
-
-    // 自动生成二次 sample_id：格式 “父ID-类型”
-    const newSampleId = `${row.sample_id}-${sampleType.toUpperCase()}`;
-
-    // 写入数据库
-    const stmt = db.prepare(`
-      INSERT INTO samples
-        (sample_id, date, species_genotype, model, tissue,
-         sample_type, processing, project, status, parent_sample_id,
-         box_id, experiment_label, notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `);
-
-    stmt.run([
-      newSampleId,
-      currentDate,
-      row.species_genotype,
-      row.model,
-      row.tissue,
-      sampleType,
-      processing || '',
-      row.project,
-      'available',
-      parentId,
-      null,             // box_id 让你之后自行放进盒子
-      row.experiment_label,
-      row.notes
-    ]);
-    stmt.free();
-  }
-
-  dbDirty = true;
-  refreshAllViews();
-  alert("Secondary samples generated.");
-});
-
 
   // Excel export using SheetJS
   document.getElementById('btn-export-xlsx').addEventListener('click', () => {
@@ -3093,7 +3297,7 @@ document.getElementById('btn-generate-secondary').addEventListener('click', asyn
       refreshAllViews();
 
       if (imported > 0) {
-        dbDirty = true; // 导入了新样本，还没导出
+        makeDbDirty(); // 导入了新样本，还没导出
       }
 
       let summary = `导入完成：\n成功导入 ${imported} 条样本。`;
@@ -3112,6 +3316,20 @@ document.getElementById('btn-generate-secondary').addEventListener('click', asyn
 
     reader.readAsArrayBuffer(file);
   });
+
+  const btnSaveR2 = document.getElementById('btn-save-r2');
+  if (btnSaveR2) {
+    btnSaveR2.addEventListener('click', () => {
+      saveDbToR2();
+    });
+  }
+
+  const btnLoadR2 = document.getElementById('btn-load-r2');
+  if (btnLoadR2) {
+    btnLoadR2.addEventListener('click', () => {
+      loadDbFromR2();
+    });
+  }
 
   // 在关闭 / 刷新页面前，如果有未导出的更改，提示用户
   window.addEventListener('beforeunload', function (e) {

@@ -1,1 +1,5 @@
 .DS_Store
+*.sqlite
+*.db
+*.sqlite3
+*.db-journal
