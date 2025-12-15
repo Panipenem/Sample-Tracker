@@ -630,13 +630,29 @@
       <div class="flex">
         <div style="flex:1; min-width:120px;">
           <label>Storage Temperature
-            <input type="text" id="storage_temperature" placeholder="-80 / -40 / -20 / LN2">
+            <select id="storage_temperature">
+              <option value=""></option>
+              <option value="-80">-80</option>
+              <option value="-40">-40</option>
+              <option value="-20">-20</option>
+              <option value="LN2">LN2</option>
+              <option value="4">4</option>
+              <option value="RT">RT</option>
+            </select>
           </label>
         </div>
         <div style="flex:1; min-width:120px;">
           <label>Freezer No.
-            <input type="text" id="freezer_no" placeholder="e.g. F1, F2, LN2-1">
+            <select id="freezer_no"></select>
           </label>
+
+          <div id="freezer-no-add-wrap" class="hidden" style="margin-top:6px;">
+            <label style="margin:0; font-size:12px; color:#6b7280;">
+              Add new freezer
+              <input type="text" id="freezer_no_new" placeholder="e.g. F1 / downstairs / LN2-1">
+            </label>
+            <button type="button" id="btn-add-freezer" style="margin-top:6px;">Add</button>
+          </div>
         </div>
         <div style="flex:1; min-width:120px;">
           <label>Rack
@@ -885,12 +901,27 @@
         <div class="flex" style="margin-top:8px;">
           <div style="flex:1; min-width:120px;">
             <label>Storage Temperature
-              <input type="text" id="batch-storage-temperature" placeholder="-80 / -20 / LN2">
+              <select id="batch-storage-temperature">
+                <option value=""></option>
+                <option value="-80">-80</option>
+                <option value="-40">-40</option>
+                <option value="-20">-20</option>
+                <option value="LN2">LN2</option>
+                <option value="4">4</option>
+                <option value="RT">RT</option>
+              </select>
             </label>
           </div>
           <div style="flex:1; min-width:120px;">
             <label>Freezer No.
-              <input type="text" id="batch-freezer-no">
+              <select id="batch-freezer-no"></select>
+              <div id="batch-freezer-no-add-wrap" class="hidden" style="margin-top:6px;">
+                <label style="margin:0; font-size:12px; color:#6b7280;">
+                  Add new freezer (will be saved to the list)
+                  <input type="text" id="batch-freezer-no-new" placeholder="e.g. F1 / downstairs / LN2-1">
+                </label>
+                <button type="button" id="btn-batch-add-freezer" style="margin-top:6px;">Add</button>
+              </div>
             </label>
           </div>
         </div>
@@ -986,6 +1017,175 @@
   window.R2_API_BASE = R2_API_BASE;
   window.R2_WRITE_TOKEN = R2_WRITE_TOKEN;
 
+  // ==== Freezer list (persisted) ====
+  const FREEZER_LIST_KEY = 'sampleApp.freezerNoList';
+
+  function loadFreezerList() {
+    try {
+      const raw = localStorage.getItem(FREEZER_LIST_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.map(s => String(s).trim()).filter(Boolean) : [];
+    } catch (e) {
+      console.warn('Failed to load freezer list:', e);
+      return [];
+    }
+  }
+
+  function saveFreezerList(list) {
+    try { localStorage.setItem(FREEZER_LIST_KEY, JSON.stringify(list)); }
+    catch (e) { console.warn('Failed to save freezer list:', e); }
+  }
+
+  function normalizeFreezerName(name) {
+    return String(name || '').trim();
+  }
+
+// ---------- Freezer list grouped by temperature ----------
+const FREEZER_LIST_PREFIX = 'sampleApp.freezerListByTemp.'; // e.g. sampleApp.freezerListByTemp.-80
+
+function freezerListKey(temp) {
+  const t = String(temp || '').trim();
+  return FREEZER_LIST_PREFIX + (t || '__NONE__');
+}
+
+function loadFreezerListByTemp(temp) {
+  try {
+    const raw = localStorage.getItem(freezerListKey(temp));
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFreezerListByTemp(temp, list) {
+  localStorage.setItem(freezerListKey(temp), JSON.stringify(list || []));
+}
+
+  function addFreezerToListByTemp(temp, name) {
+    const t = String(temp || '').trim();
+    if (!t) return false; // 防呆：没选温度不允许保存 freezer
+    const n = normalizeFreezerName(name);
+    if (!n) return false;
+
+    const list = loadFreezerListByTemp(t);
+    const exists = list.some(x => String(x).toLowerCase() === n.toLowerCase());
+    if (!exists) {
+      list.push(n);
+      list.sort((a,b) => a.localeCompare(b, 'en', { numeric: true }));
+      saveFreezerListByTemp(t, list);
+    }
+    return true;
+  }
+
+  // 从 boxes 表里按温度取 freezer_no；再 union 本地缓存（同温度）
+  function getAllFreezerOptionsByTemp(temp) {
+    const t = String(temp || '').trim();
+    if (!t) return []; // 防呆：没选温度 → freezer 下拉空
+
+    const fromLS = loadFreezerListByTemp(t);
+    const fromDb = db
+      ? queryAll(
+          'SELECT DISTINCT freezer_no FROM boxes WHERE storage_temperature = ? AND freezer_no IS NOT NULL AND freezer_no != ""',
+          [t]
+        ).map(r => String(r.freezer_no || '').trim()).filter(Boolean)
+      : [];
+
+    const map = new Map();
+    [...fromLS, ...fromDb].forEach(v => {
+      const k = v.toLowerCase();
+      if (!map.has(k)) map.set(k, v);
+    });
+    return Array.from(map.values()).sort((a,b) => a.localeCompare(b, 'en', { numeric: true }));
+  }
+
+  // tempEl：对应的温度下拉（main/batch）；selectEl：freezer下拉
+  function fillFreezerSelectByTemp(selectEl, currentValue, tempEl) {
+    if (!selectEl) return;
+
+    const tempVal = String(tempEl?.value || '').trim();
+    const cur = normalizeFreezerName(currentValue);
+
+    selectEl.innerHTML = '';
+
+    if (!tempVal) {
+      // 没选温度：freezer 下拉空白/不可选（你要求的防呆）
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '(select temperature first)';
+      selectEl.appendChild(opt);
+      selectEl.value = '';
+      selectEl.disabled = true;
+      return;
+    }
+
+    selectEl.disabled = false;
+
+    const options = getAllFreezerOptionsByTemp(tempVal);
+
+    const opt0 = document.createElement('option');
+    opt0.value = '';
+    opt0.textContent = '(select)';
+    selectEl.appendChild(opt0);
+
+    options.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      if (cur && v.toLowerCase() === cur.toLowerCase()) o.selected = true;
+      selectEl.appendChild(o);
+    });
+
+    const addOpt = document.createElement('option');
+    addOpt.value = '__add__';
+    addOpt.textContent = '+ Add new…';
+    selectEl.appendChild(addOpt);
+
+    if (cur && !options.some(v => v.toLowerCase() === cur.toLowerCase())) {
+      selectEl.value = '__add__';
+    }
+  }
+
+  function refreshFreezerMenus() {
+    const mainTemp  = document.getElementById('storage_temperature');
+    const batchTemp = document.getElementById('batch-storage-temperature');
+
+    const mainSel  = document.getElementById('freezer_no');
+    const batchSel = document.getElementById('batch-freezer-no');
+
+    // 保留当前值（你之前提到“总被重置”的根源就出在这里）
+    const mainCur  = mainSel  ? mainSel.value  : '';
+    const batchCur = batchSel ? batchSel.value : '';
+
+    fillFreezerSelectByTemp(mainSel, mainCur, mainTemp);
+    fillFreezerSelectByTemp(batchSel, batchCur, batchTemp);
+
+    const mainWrap = document.getElementById('freezer-no-add-wrap');
+    if (mainSel && mainWrap) mainWrap.classList.toggle('hidden', mainSel.value !== '__add__' || mainSel.disabled);
+
+    const batchWrap = document.getElementById('batch-freezer-no-add-wrap');
+    if (batchSel && batchWrap) batchWrap.classList.toggle('hidden', batchSel.value !== '__add__' || batchSel.disabled);
+  }
+
+  function getFreezerNoFromUI() {
+    const sel = document.getElementById('freezer_no');
+    if (!sel) return '';
+    if (sel.value === '__add__') {
+      return normalizeFreezerName(document.getElementById('freezer_no_new')?.value);
+    }
+    return normalizeFreezerName(sel.value);
+  }
+
+  function getBatchFreezerNoFromUI() {
+    const sel = document.getElementById('batch-freezer-no');
+    if (!sel) return '';
+    if (sel.value === '__add__') {
+      return normalizeFreezerName(document.getElementById('batch-freezer-no-new')?.value);
+    }
+    return normalizeFreezerName(sel.value);
+  }
+
   // ==== LocalStorage keys, 用于缓存最近的 DB ====
   const LAST_DB_KEY = 'sampleApp.lastDbBase64';
   const LAST_DB_NAME_KEY = 'sampleApp.lastDbName';
@@ -1057,6 +1257,7 @@
     document.getElementById('db-status').textContent = 'sql.js loaded. Click "New in-memory DB" or load a .sqlite file.';
     // sql.js 就绪后尝试自动加载上一次缓存的 DB
     tryAutoLoadLastDb();
+    refreshFreezerMenus();
   });
 
   // Create new in-memory DB
@@ -1069,6 +1270,7 @@
     dbDirty = false;
     initSchema();
     refreshAllViews();
+    refreshFreezerMenus();
     document.getElementById('db-status').textContent = 'New empty in-memory DB.';
   });
 
@@ -1085,6 +1287,7 @@
     initSchema(); // in case old DB has no schema
     refreshAllViews();
     refreshDbStatus();
+    refreshFreezerMenus();
 
     // 将当前 DB 缓存到 localStorage，供下次自动加载使用
     try {
@@ -1244,6 +1447,7 @@
     localStorage.setItem('LIMS_LAST_SYNC_VERSION', String(lastSyncedVersion));
 
     refreshAllViews();
+    refreshFreezerMenus();
     updateVersionBadge();
 
     const statusEl = document.getElementById('db-status');
@@ -1418,7 +1622,7 @@
       project: document.getElementById('project').value || null,
       status: document.getElementById('status').value || 'available',
       storage_temperature: document.getElementById('storage_temperature').value || '',
-      freezer_no: document.getElementById('freezer_no').value || '',
+      freezer_no: getFreezerNoFromUI() || '',
       rack: document.getElementById('rack').value || '',
       box_label: document.getElementById('box_label').value || ''
     };
@@ -1426,6 +1630,18 @@
     if (!sample.sample_id) {
       alert('Sample ID is required.');
       return;
+    }
+
+    // If user added a new freezer name, persist it (by temperature) and refresh menus
+    if (sample.freezer_no && sample.storage_temperature) {
+      addFreezerToListByTemp(sample.storage_temperature, sample.freezer_no);
+      refreshFreezerMenus();
+
+      const sel = document.getElementById('freezer_no');
+      if (sel && sel.value === '__add__') sel.value = sample.freezer_no;
+
+      const wrap = document.getElementById('freezer-no-add-wrap');
+      if (wrap) wrap.classList.add('hidden');
     }
 
     db.run('BEGIN TRANSACTION;');
@@ -2105,6 +2321,75 @@
     });
   }
 
+  // --- Freezer menu behavior (main) ---
+  const freezerSel = document.getElementById('freezer_no');
+  if (freezerSel) {
+    freezerSel.addEventListener('change', () => {
+      const wrap = document.getElementById('freezer-no-add-wrap');
+      if (wrap) wrap.classList.toggle('hidden', freezerSel.value !== '__add__');
+    });
+  }
+
+  // --- Temperature change should refresh freezer menus (main + batch) ---
+  const tempSel = document.getElementById('storage_temperature');
+  if (tempSel) tempSel.addEventListener('change', refreshFreezerMenus);
+
+
+  const btnAddFreezer = document.getElementById('btn-add-freezer');
+  if (btnAddFreezer) {
+    btnAddFreezer.addEventListener('click', () => {
+      const tempVal = (document.getElementById('storage_temperature')?.value || '').trim();
+      if (!tempVal) { alert('Please choose storage temperature first.'); return; }
+
+      const val = normalizeFreezerName(document.getElementById('freezer_no_new')?.value);
+      if (!val) { alert('Please input a freezer name.'); return; }
+
+      // 按温度保存（你第1/2步会提供 addFreezerToListByTemp）
+      addFreezerToListByTemp(tempVal, val);
+
+      // 刷新下拉（会按 temp 分组）
+      refreshFreezerMenus();
+
+      const sel = document.getElementById('freezer_no');
+      if (sel) sel.value = val;
+
+      const wrap = document.getElementById('freezer-no-add-wrap');
+      if (wrap) wrap.classList.add('hidden');
+    });
+  }
+
+  // --- Freezer menu behavior (batch) ---
+  const batchFreezerSel = document.getElementById('batch-freezer-no');
+  if (batchFreezerSel) {
+    batchFreezerSel.addEventListener('change', () => {
+      const wrap = document.getElementById('batch-freezer-no-add-wrap');
+      if (wrap) wrap.classList.toggle('hidden', batchFreezerSel.value !== '__add__');
+    });
+  }
+
+  const batchTempSel = document.getElementById('batch-storage-temperature');
+  if (batchTempSel) batchTempSel.addEventListener('change', refreshFreezerMenus);
+
+  const btnBatchAddFreezer = document.getElementById('btn-batch-add-freezer');
+  if (btnBatchAddFreezer) {
+    btnBatchAddFreezer.addEventListener('click', () => {
+      const tempVal = (document.getElementById('batch-storage-temperature')?.value || '').trim();
+      if (!tempVal) { alert('Please choose storage temperature first.'); return; }
+
+      const val = normalizeFreezerName(document.getElementById('batch-freezer-no-new')?.value);
+      if (!val) { alert('Please input a freezer name.'); return; }
+
+      addFreezerToListByTemp(tempVal, val);
+      refreshFreezerMenus();
+
+      const sel = document.getElementById('batch-freezer-no');
+      if (sel) sel.value = val;
+
+      const wrap = document.getElementById('batch-freezer-no-add-wrap');
+      if (wrap) wrap.classList.add('hidden');
+    });
+  }
+
   // 绑定 Wizard 按钮
   document.getElementById('btn-open-secondary-wizard').addEventListener('click', openWizard);
   document.getElementById('wizard-close-btn').addEventListener('click', closeWizard);
@@ -2642,6 +2927,15 @@
 
         const advSec = document.getElementById('batch-advanced-section');
        if (advSec) advSec.style.display = 'none';
+      
+       // 刷新 freezer 下拉（从 localStorage + boxes 表 union 出最新列表）
+        refreshFreezerMenus();
+
+        // 同时把“新增 freezer”输入框也清空并隐藏
+        const bNew = document.getElementById('batch-freezer-no-new');
+        if (bNew) bNew.value = '';
+        const bWrap = document.getElementById('batch-freezer-no-add-wrap');
+        if (bWrap) bWrap.classList.add('hidden');
 
       batchBackdrop.classList.remove('hidden');
       batchBackdrop.style.display = 'flex';
@@ -2686,7 +2980,7 @@
         const statusRaw    = document.getElementById('batch-status').value || '';
 
         const tempRaw      = (document.getElementById('batch-storage-temperature').value || '').trim();
-        const freezerRaw   = (document.getElementById('batch-freezer-no').value || '').trim();
+        const freezerRaw   = (getBatchFreezerNoFromUI() || '').trim();
         const rackRaw      = (document.getElementById('batch-rack').value || '').trim();
         const boxLabelRaw  = (document.getElementById('batch-box-label').value || '').trim();
 
@@ -2714,75 +3008,107 @@
         return;
       }
 
-      // 统一 box：如果填写了 storage + box_label，就为这批样本建立/复用同一个盒子
+  // 是否要做 storage patch：只要四个字段里任何一个有输入，就做
+  const wantStoragePatch = !!(tempRaw || freezerRaw || rackRaw || boxLabelRaw);
+
+  db.run('BEGIN TRANSACTION;');
+
+  // 1) 先 patch samples 表里“直接字段”（不含 box_id）
+  const stmt = db.prepare(`
+    UPDATE samples SET
+        project          = COALESCE(?, project),
+        notes            = COALESCE(?, notes),
+        processing       = COALESCE(?, processing),
+        status           = COALESCE(?, status),
+        species_genotype = COALESCE(?, species_genotype),
+        model            = COALESCE(?, model),
+        tissue           = COALESCE(?, tissue),
+        sample_type      = COALESCE(?, sample_type),
+        updated_at       = datetime('now')
+    WHERE id = ?;
+  `);
+
+  checked.forEach(cb => {
+    const id = parseInt(cb.getAttribute('data-id'), 10);
+    if (!Number.isFinite(id)) return;
+
+    stmt.run([
+      projVal,
+      notesVal,
+      procVal,
+      statusVal,
+      speciesVal,
+      modelVal,
+      tissueVal,
+      typeVal,
+      id
+    ]);
+  });
+  stmt.free();
+
+  // 2) 再逐个样本 patch storage（通过 box_id → boxes）
+  if (wantStoragePatch) {
+    const updBox = db.prepare(`UPDATE samples SET box_id = ?, updated_at = datetime('now') WHERE id = ?;`);
+
+    checked.forEach(cb => {
+      const id = parseInt(cb.getAttribute('data-id'), 10);
+      if (!Number.isFinite(id)) return;
+
+      // 读当前 box 信息
+      const cur = queryAll(`
+        SELECT b.storage_temperature, b.freezer_no, b.rack, b.box_label
+        FROM samples s
+        LEFT JOIN boxes b ON s.box_id = b.id
+        WHERE s.id = ?
+        LIMIT 1;
+      `, [id])[0] || {};
+
+      const curTemp    = (cur.storage_temperature || '').trim();
+      const curFreezer = (cur.freezer_no || '').trim();
+      const curRack    = (cur.rack || '').trim();
+      const curLabel   = (cur.box_label || '').trim();
+
+      // patch：只覆盖用户输入的字段；没输入的保留该样本原值
+      const newTemp    = tempRaw    || curTemp;
+      const newFreezer = freezerRaw || curFreezer;
+      const newRack    = rackRaw    || curRack;
+      const newLabel   = boxLabelRaw|| curLabel;
+
+      // 如果 patch 后仍然全空，就不改 box_id
+      if (!(newTemp || newFreezer || newRack || newLabel)) return;
+
+      // 找/建 box（按你原来的唯一键逻辑）
       let boxId = null;
-      const hasAnyStorage = tempRaw || freezerRaw || rackRaw || boxLabelRaw;
-      if (hasAnyStorage && boxLabelRaw) {
-        const existing = queryAll(
-          `SELECT id FROM boxes
-           WHERE storage_temperature = ? AND freezer_no = ? AND rack = ? AND box_label = ?
-           LIMIT 1`,
-          [tempRaw || '', freezerRaw || '', rackRaw || '', boxLabelRaw]
-        );
-        if (existing.length > 0) {
-          boxId = existing[0].id;
-        } else {
-          const insertBoxStmt = db.prepare(`
-            INSERT INTO boxes (storage_temperature, freezer_no, rack, box_label)
-            VALUES (?, ?, ?, ?);
-          `);
-          insertBoxStmt.run([
-            tempRaw || '',
-            freezerRaw || '',
-            rackRaw || '',
-            boxLabelRaw
-          ]);
-          insertBoxStmt.free();
-          const row = queryAll('SELECT last_insert_rowid() AS id;')[0];
-          boxId = row.id;
-        }
+      const existing = queryAll(
+        `SELECT id FROM boxes
+        WHERE storage_temperature = ? AND freezer_no = ? AND rack = ? AND box_label = ?
+        LIMIT 1`,
+        [newTemp || '', newFreezer || '', newRack || '', newLabel || '']
+      );
+      if (existing.length > 0) {
+        boxId = existing[0].id;
+      } else {
+        const insertBoxStmt = db.prepare(`
+          INSERT INTO boxes (storage_temperature, freezer_no, rack, box_label)
+          VALUES (?, ?, ?, ?);
+        `);
+        insertBoxStmt.run([newTemp || '', newFreezer || '', newRack || '', newLabel || '']);
+        insertBoxStmt.free();
+        boxId = queryAll('SELECT last_insert_rowid() AS id;')[0].id;
       }
 
-      db.run('BEGIN TRANSACTION;');
-      const stmt = db.prepare(`
-        UPDATE samples SET
-            project          = COALESCE(?, project),
-            notes            = COALESCE(?, notes),
-            processing       = COALESCE(?, processing),
-            status           = COALESCE(?, status),
-            species_genotype = COALESCE(?, species_genotype),
-            model            = COALESCE(?, model),
-            tissue           = COALESCE(?, tissue),
-            sample_type      = COALESCE(?, sample_type),
-            box_id           = COALESCE(?, box_id),
-            updated_at       = datetime('now')
-        WHERE id = ?;
-        `);
-
-      checked.forEach(cb => {
-        const id = parseInt(cb.getAttribute('data-id'), 10);
-        if (!Number.isFinite(id)) return;
-        stmt.run([
-          projVal,
-          notesVal,
-          procVal,
-          statusVal,
-          speciesVal,
-          modelVal,
-          tissueVal,
-          typeVal,
-          boxId,
-          id
-        ]);
-      });
-
-      stmt.free();
-      db.run('COMMIT;');
-      makeDbDirty();
-      closeBatchEdit();
-      refreshAllViews();
+      updBox.run([boxId, id]);
     });
+
+    updBox.free();
   }
+
+  db.run('COMMIT;');
+  makeDbDirty();
+  closeBatchEdit();
+  refreshAllViews();
+      });
+    }
 
 
   // 批量操作：active samples
