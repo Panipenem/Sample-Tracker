@@ -1,0 +1,62 @@
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+h2 {
+  margin-top: 24px;
+  font-size: 18px;
+}
+
+h3 {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+label {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 40px;
+}
+
+button {
+  margin-top: 8px;
+  margin-right: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
+}
+
+.small { font-size: 11px; color: #6b7280; }
+    .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 8px;
+    margin-top: 8px;
+}

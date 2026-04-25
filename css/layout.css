@@ -1,0 +1,116 @@
+header {
+  background: #1f2937;
+  color: white;
+  padding: 12px 16px;
+}
+
+main {
+  padding: 16px;
+}
+
+.section {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.flex > * {
+  margin: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+  margin-top: 8px;
+}
+
+.tab-button {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  background: #f9fafb;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+}
+
+.tab-button.active {
+  background: white;
+  border-bottom: 1px solid white;
+  font-weight: 600;
+}
+
+.db-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.db-file-label {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  gap: 8px;
+}
+
+.db-file-label input[type="file"] {
+  font-size: 14px;
+  padding: 2px 0;
+}
+
+.import-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.import-row label {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 4px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.import-row input[type="file"] {
+  padding: 4px;
+  font-size: 12px;
+}
+
+.import-row button {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.sticky-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #fff;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.toolbar-actions {
+  padding-top: 6px;
+}

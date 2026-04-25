@@ -1,0 +1,105 @@
+#samples-table,
+#archived-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+#samples-table th,
+#samples-table td,
+#archived-table th,
+#archived-table td {
+  border: 1px solid #d1d5db;
+  padding: 6px 8px;
+  text-align: left;
+  word-wrap: break-word;
+}
+
+#samples-table th,
+#archived-table th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+#samples-table th:first-child,
+#samples-table td:first-child,
+#archived-table th:first-child,
+#archived-table td:first-child {
+  width: 32px;
+  text-align: center;
+}
+
+#samples-table td:first-child input[type="checkbox"],
+#archived-table td:first-child input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  vertical-align: middle;
+}
+
+#samples-table th:nth-child(3),
+#samples-table td:nth-child(3),
+#archived-table th:nth-child(3),
+#archived-table td:nth-child(3) {
+  width: 80px;
+}
+
+#samples-table th:nth-child(4),
+#samples-table td:nth-child(4),
+#archived-table th:nth-child(4),
+#archived-table td:nth-child(4) {
+  width: 70px;
+}
+
+
+#samples-table th:nth-child(12),
+#samples-table td:nth-child(12),
+#archived-table th:nth-child(12),
+#archived-table td:nth-child(12) {
+    max-width: 200px;
+    white-space: normal;
+    word-break: break-word;
+}
+
+#samples-table th:last-child,
+#samples-table td:last-child,
+#archived-table th:last-child,
+#archived-table td:last-child {
+  white-space: nowrap;
+  width: 160px;
+  max-width: 160px;
+}
+
+#samples-table td:last-child button,
+#archived-table td:last-child button {
+  padding: 3px 6px;
+  font-size: 11px;
+  margin: 0 2px;
+  display: inline-block;
+}
+
+#samples-table td button,
+#archived-table td button {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+#samples-table tbody tr:nth-child(odd),
+#archived-table tbody tr:nth-child(odd) {
+  background-color: #f9fafb;
+}
+
+#samples-table tbody tr:nth-child(even),
+#archived-table tbody tr:nth-child(even) {
+  background-color: #ffffff;
+}
+
+#samples-table tbody tr:hover,
+#archived-table tbody tr:hover {
+  background-color: #e5f0ff;
+}
+
+tr.row-selected {
+  background-color: #dbeafe !important;
+}
