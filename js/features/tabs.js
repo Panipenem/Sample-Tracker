@@ -3,6 +3,7 @@ const TAB_SECTION_IDS = {
   samples: 'section-samples',
   archived: 'section-archived',
   deleted: 'section-deleted',
+  audit: 'section-audit',
   boxes: 'section-boxes',
 };
 

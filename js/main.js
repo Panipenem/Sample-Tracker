@@ -103,6 +103,10 @@ import {
     renderBoxes 
 } from './features/boxView.js';
 
+import {
+  renderAuditLog
+} from './features/auditLog.js';
+
 import { 
     bindBatchEditEvents 
 } from './features/batchEdit.js';
@@ -145,6 +149,7 @@ import {
     renderSamples();
     renderArchivedSamples();
     renderDeletedSamples();
+    renderAuditLog();
     renderBoxes();
   }
 

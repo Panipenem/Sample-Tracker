@@ -56,6 +56,7 @@
     <button class="tab-button" data-tab="samples">Sample List</button>
     <button class="tab-button" data-tab="archived">Archived</button>
     <button class="tab-button" data-tab="deleted">Deleted</button>
+    <button class="tab-button" data-tab="audit">Audit Log</button>
     <button class="tab-button" data-tab="boxes">Box View</button>
   </div>
 
@@ -345,6 +346,25 @@
         <th>Project</th>
         <th>Status</th>
         <th>Storage</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Audit log -->
+  <div class="section" id="section-audit">
+    <h2>Audit Log</h2>
+    <div class="sticky-toolbar">
+      <div class="small">Shows the latest 200 sample events recorded in this SQLite database.</div>
+    </div>
+    <table id="audit-table">
+      <thead>
+      <tr>
+        <th>Time</th>
+        <th>Action</th>
+        <th>Sample ID</th>
+        <th>Details</th>
       </tr>
       </thead>
       <tbody></tbody>
