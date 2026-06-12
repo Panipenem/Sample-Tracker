@@ -95,6 +95,7 @@ import {
 import {
   renderSamples as renderSamplesBase,
   renderArchivedSamples,
+  renderDeletedSamples,
   loadSampleToForm as loadSampleToFormBase,
 } from './features/sampleRender.js';
 
@@ -143,6 +144,7 @@ import {
   function refreshAllViews() {
     renderSamples();
     renderArchivedSamples();
+    renderDeletedSamples();
     renderBoxes();
   }
 
@@ -176,6 +178,7 @@ import {
   bindSampleFilterEvents({
     renderSamples,
     renderArchivedSamples,
+    renderDeletedSamples,
   });
 
   bindSampleActionEvents({

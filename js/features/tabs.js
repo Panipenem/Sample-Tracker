@@ -2,6 +2,7 @@ const TAB_SECTION_IDS = {
   form: 'section-form',
   samples: 'section-samples',
   archived: 'section-archived',
+  deleted: 'section-deleted',
   boxes: 'section-boxes',
 };
 

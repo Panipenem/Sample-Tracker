@@ -3,6 +3,7 @@
 export function bindSampleSelectionEvents() {
   enableShiftSelect('.sample-select');
   enableShiftSelect('.archived-select');
+  enableShiftSelect('.deleted-select');
 
   bindSelectAll({
     selectAllId: 'select-all-samples',
@@ -12,6 +13,11 @@ export function bindSampleSelectionEvents() {
   bindSelectAll({
     selectAllId: 'select-all-archived',
     checkboxSelector: '.archived-select',
+  });
+
+  bindSelectAll({
+    selectAllId: 'select-all-deleted',
+    checkboxSelector: '.deleted-select',
   });
 
   bindRowHighlightOnChange();
@@ -72,7 +78,7 @@ function bindRowHighlightOnChange() {
     const target = event.target;
 
     if (!(target instanceof HTMLInputElement)) return;
-    if (!target.matches('.sample-select, .archived-select')) return;
+    if (!target.matches('.sample-select, .archived-select, .deleted-select')) return;
 
     const tr = target.closest('tr');
     if (tr) {

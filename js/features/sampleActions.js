@@ -12,6 +12,7 @@ export function bindSampleActionEvents({
   bindDeleteSelectedButton({ makeDbDirty, refreshAllViews });
   bindUnarchiveSelectedButton({ makeDbDirty, refreshAllViews });
   bindDeleteArchivedButton({ makeDbDirty, refreshAllViews });
+  bindRestoreDeletedButton({ makeDbDirty, refreshAllViews });
 }
 
 function bindArchiveSelectedButton({ makeDbDirty, refreshAllViews } = {}) {
@@ -78,7 +79,7 @@ function bindDeleteSelectedButton({ makeDbDirty, refreshAllViews } = {}) {
 
     if (
       !confirm(
-        `Mark ${checked.length} selected samples as deleted? Records will be kept in the database.`
+        `Soft delete ${checked.length} selected samples? Records will move to the Deleted tab and remain recoverable.`
       )
     ) {
       return;
@@ -184,7 +185,7 @@ function bindDeleteArchivedButton({ makeDbDirty, refreshAllViews } = {}) {
       return;
     }
 
-    if (!confirm(`Mark ${checked.length} archived samples as deleted? Records will be kept in the database.`)) {
+    if (!confirm(`Soft delete ${checked.length} archived samples? Records will move to the Deleted tab and remain recoverable.`)) {
       return;
     }
 
@@ -203,6 +204,56 @@ function bindDeleteArchivedButton({ makeDbDirty, refreshAllViews } = {}) {
             sampleId: sample.sample_id,
             action: 'delete',
             details: { source: 'archived_bulk_action', mode: 'soft_delete' },
+          });
+        });
+      } finally {
+        stmt.free();
+      }
+    });
+
+    if (typeof makeDbDirty === 'function') {
+      makeDbDirty();
+    }
+
+    if (typeof refreshAllViews === 'function') {
+      refreshAllViews();
+    }
+  });
+}
+
+function bindRestoreDeletedButton({ makeDbDirty, refreshAllViews } = {}) {
+  const btn = document.getElementById('btn-restore-deleted');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    if (!appState.db) return;
+
+    const checked = Array.from(document.querySelectorAll('.deleted-select:checked'));
+
+    if (checked.length === 0) {
+      alert('No deleted samples selected.');
+      return;
+    }
+
+    if (!confirm(`Restore ${checked.length} deleted samples to the active Sample List?`)) {
+      return;
+    }
+
+    withTransaction(() => {
+      const stmt = appState.db.prepare(
+        'UPDATE samples SET status = ?, deleted_at = NULL, updated_at = datetime(\'now\') WHERE id = ?'
+      );
+
+      try {
+        checked.forEach(cb => {
+          const id = parseInt(cb.getAttribute('data-id'), 10);
+          const sample = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [id])[0] || {};
+          stmt.run(['available', id]);
+          recordSampleEvent({
+            sampleRowId: id,
+            sampleId: sample.sample_id,
+            action: 'restore_deleted',
+            details: { source: 'deleted_tab' },
           });
         });
       } finally {

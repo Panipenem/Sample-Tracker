@@ -55,6 +55,7 @@
     <button class="tab-button active" data-tab="form">Data Entry</button>
     <button class="tab-button" data-tab="samples">Sample List</button>
     <button class="tab-button" data-tab="archived">Archived</button>
+    <button class="tab-button" data-tab="deleted">Deleted</button>
     <button class="tab-button" data-tab="boxes">Box View</button>
   </div>
 
@@ -232,13 +233,13 @@
       </div>
       <div style="margin-left:auto;">
         <button id="btn-archive-selected">Archive selected</button>
-        <button id="btn-delete-selected" style="background:#b40000;color:#fff;">Delete selected</button>
+        <button id="btn-delete-selected" style="background:#b40000;color:#fff;">Soft delete selected</button>
       </div>
     </div>
     <div class="flex" style="margin-top:6px;">
-      <button type="button" id="samples-prev-page">Prev</button>
-      <span id="samples-page-info" class="small">0-0 / 0</span>
-      <button type="button" id="samples-next-page">Next</button>
+      <button type="button" id="samples-prev-page" style="display:none;">Prev</button>
+      <span id="samples-page-info" class="small">Showing 0-0 / 0 · 100 per page</span>
+      <button type="button" id="samples-next-page" style="display:none;">Next</button>
     </div>
     </div>
     
@@ -276,13 +277,13 @@
       </div>
       <div class="flex" style="margin-top:6px;">
         <div>
-          <button type="button" id="archived-prev-page">Prev</button>
-          <span id="archived-page-info" class="small">0-0 / 0</span>
-          <button type="button" id="archived-next-page">Next</button>
+          <button type="button" id="archived-prev-page" style="display:none;">Prev</button>
+          <span id="archived-page-info" class="small">Showing 0-0 / 0 · 100 per page</span>
+          <button type="button" id="archived-next-page" style="display:none;">Next</button>
         </div>
         <div style="margin-left:auto;">
           <button id="btn-unarchive-selected">Unarchive selected</button>
-          <button id="btn-delete-archived" style="background:#b40000;color:#fff;">Delete selected</button>
+          <button id="btn-delete-archived" style="background:#b40000;color:#fff;">Soft delete selected</button>
         </div>
       </div>
     </div>
@@ -290,6 +291,48 @@
       <thead>
       <tr>
         <th><input type="checkbox" id="select-all-archived"></th>
+        <th>Sample ID</th>
+        <th>Date</th>
+        <th>Exp label</th>
+        <th>Species / Genotype</th>
+        <th>Model</th>
+        <th>Tissue</th>
+        <th>Type</th>
+        <th>Processing</th>
+        <th>notes</th>
+        <th>Project</th>
+        <th>Status</th>
+        <th>Storage</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Deleted samples -->
+  <div class="section" id="section-deleted">
+    <h2>Deleted samples</h2>
+    <div class="sticky-toolbar">
+      <div class="flex">
+        <label>Search (Sample ID / tissue / model / project)
+          <input type="text" id="deleted-search-input" placeholder="Type to filter deleted samples...">
+        </label>
+      </div>
+      <div class="flex" style="margin-top:6px;">
+        <div>
+          <button type="button" id="deleted-prev-page" style="display:none;">Prev</button>
+          <span id="deleted-page-info" class="small">Showing 0-0 / 0 · 100 per page</span>
+          <button type="button" id="deleted-next-page" style="display:none;">Next</button>
+        </div>
+        <div style="margin-left:auto;">
+          <button id="btn-restore-deleted">Restore selected</button>
+        </div>
+      </div>
+    </div>
+    <table id="deleted-table">
+      <thead>
+      <tr>
+        <th><input type="checkbox" id="select-all-deleted"></th>
         <th>Sample ID</th>
         <th>Date</th>
         <th>Exp label</th>

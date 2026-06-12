@@ -10,6 +10,7 @@ const PAGE_SIZE = 100;
 const tableState = {
   samplesPage: 1,
   archivedPage: 1,
+  deletedPage: 1,
 };
 
 export function isArchivedStatus(status) {
@@ -20,8 +21,7 @@ export function isArchivedStatus(status) {
     s === 'archived' ||
     s === 'retired' ||
     s === 'discarded' ||
-    s === 'consumed' ||
-    s === 'deleted'
+    s === 'consumed'
   );
 }
 
@@ -31,6 +31,10 @@ export function resetSamplePagination() {
 
 export function resetArchivedPagination() {
   tableState.archivedPage = 1;
+}
+
+export function resetDeletedPagination() {
+  tableState.deletedPage = 1;
 }
 
 function buildSearchWhere(search, fields) {
@@ -90,15 +94,17 @@ function renderPager({
   if (info) {
     const start = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
     const end = Math.min(total, page * PAGE_SIZE);
-    info.textContent = `${start}-${end} / ${total} (page ${page}/${totalPages})`;
+    info.textContent = `Showing ${start}-${end} / ${total} · page ${page}/${totalPages} · ${PAGE_SIZE} per page`;
   }
 
   if (prev) {
+    prev.style.display = totalPages > 1 ? 'inline-block' : 'none';
     prev.disabled = page <= 1;
     prev.onclick = onPrev;
   }
 
   if (next) {
+    next.style.display = totalPages > 1 ? 'inline-block' : 'none';
     next.disabled = page >= totalPages;
     next.onclick = onNext;
   }
@@ -215,7 +221,7 @@ export function renderSamples({
           data-sample-id="${escapeHtml(row.sample_id)}"
           class="btn-delete"
         >
-          Delete
+          Soft delete
         </button>
       </td>
     `;
@@ -317,7 +323,7 @@ function bindRowActionButtons({
 
       if (
         !confirm(
-          `Mark ${label} as deleted? The record will be kept in the database.`
+          `Soft delete ${label}? It will move to the Deleted tab and remain recoverable.`
         )
       ) {
         return;
@@ -377,7 +383,7 @@ export function renderArchivedSamples() {
     's.experiment_label',
   ]);
   const whereClause =
-    `(s.status IN ('archived','retired','discarded','consumed','deleted'))` +
+    `(s.status IN ('archived','retired','discarded','consumed'))` +
     searchWhere.clause;
   const whereParams = searchWhere.params;
   const totalRow = queryAll(
@@ -460,6 +466,99 @@ export function renderArchivedSamples() {
     onNext: () => {
       tableState.archivedPage = Math.min(totalPages, tableState.archivedPage + 1);
       renderArchivedSamples();
+    },
+  });
+}
+
+export function renderDeletedSamples() {
+  const tbody = document.querySelector('#deleted-table tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  if (!appState.db) return;
+
+  const search = document
+    .getElementById('deleted-search-input')
+    .value.trim()
+    .toLowerCase();
+
+  const searchWhere = buildSearchWhere(search, [
+    's.sample_id',
+    's.tissue',
+    's.model',
+    's.project',
+    's.processing',
+    's.species_genotype',
+    's.experiment_label',
+  ]);
+  const whereClause = `(s.status = 'deleted')` + searchWhere.clause;
+  const whereParams = searchWhere.params;
+  const totalRow = queryAll(
+    `SELECT COUNT(*) AS c
+     FROM samples s
+     LEFT JOIN boxes b ON s.box_id = b.id
+     WHERE ${whereClause};`,
+    whereParams
+  )[0] || { c: 0 };
+  const total = Number(totalRow.c) || 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  tableState.deletedPage = Math.min(tableState.deletedPage, totalPages);
+  const offset = (tableState.deletedPage - 1) * PAGE_SIZE;
+  const rows = queryAll(
+    getSampleSelectSql(whereClause),
+    whereParams.concat([PAGE_SIZE, offset])
+  );
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    const storageParts = [];
+    if (row.storage_temperature) storageParts.push(row.storage_temperature);
+    if (row.freezer_no) storageParts.push(row.freezer_no);
+    if (row.rack) storageParts.push(row.rack);
+    if (row.box_label) storageParts.push(row.box_label);
+
+    const statusHtml = row.status
+      ? `<span class="tag">${escapeHtml(row.status)}</span>`
+      : '';
+    const id = Number(row.id) || 0;
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="deleted-select" data-id="${id}"></td>
+      <td>${escapeHtml(row.sample_id)}</td>
+      <td>${escapeHtml(row.date)}</td>
+      <td>${escapeHtml(row.experiment_label)}</td>
+      <td>${escapeHtml(row.species_genotype)}</td>
+      <td>${escapeHtml(row.model)}</td>
+      <td>${escapeHtml(row.tissue)}</td>
+      <td>${escapeHtml(row.sample_type)}</td>
+      <td>${escapeHtml(row.processing)}</td>
+      <td>${escapeHtml(row.notes)}</td>
+      <td>${escapeHtml(row.project)}</td>
+      <td>${statusHtml}</td>
+      <td>${escapeHtml(storageParts.join(' / '))}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+
+  const selectAll = document.getElementById('select-all-deleted');
+  if (selectAll) {
+    selectAll.checked = false;
+  }
+
+  renderPager({
+    infoId: 'deleted-page-info',
+    prevId: 'deleted-prev-page',
+    nextId: 'deleted-next-page',
+    page: tableState.deletedPage,
+    total,
+    onPrev: () => {
+      tableState.deletedPage = Math.max(1, tableState.deletedPage - 1);
+      renderDeletedSamples();
+    },
+    onNext: () => {
+      tableState.deletedPage = Math.min(totalPages, tableState.deletedPage + 1);
+      renderDeletedSamples();
     },
   });
 }
