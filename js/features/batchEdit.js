@@ -1,5 +1,6 @@
 import { appState } from '../state.js';
-import { queryAll } from '../db/query.js';
+import { queryAll, withTransaction } from '../db/query.js';
+import { getOrCreateBoxId } from '../db/boxes.js';
 import { getBatchFreezerNoFromUI } from './freezerSelect.js';
 
 export function bindBatchEditEvents({
@@ -170,102 +171,94 @@ function bindApplyBatchEdit(
 
     const wantStoragePatch = !!(tempRaw || freezerRaw || rackRaw || boxLabelRaw);
 
-    appState.db.run('BEGIN TRANSACTION;');
+    try {
+      withTransaction(() => {
+        const stmt = appState.db.prepare(`
+          UPDATE samples SET
+              project          = COALESCE(?, project),
+              notes            = COALESCE(?, notes),
+              processing       = COALESCE(?, processing),
+              status           = COALESCE(?, status),
+              species_genotype = COALESCE(?, species_genotype),
+              model            = COALESCE(?, model),
+              tissue           = COALESCE(?, tissue),
+              sample_type      = COALESCE(?, sample_type),
+              updated_at       = datetime('now')
+          WHERE id = ?;
+        `);
 
-    const stmt = appState.db.prepare(`
-      UPDATE samples SET
-          project          = COALESCE(?, project),
-          notes            = COALESCE(?, notes),
-          processing       = COALESCE(?, processing),
-          status           = COALESCE(?, status),
-          species_genotype = COALESCE(?, species_genotype),
-          model            = COALESCE(?, model),
-          tissue           = COALESCE(?, tissue),
-          sample_type      = COALESCE(?, sample_type),
-          updated_at       = datetime('now')
-      WHERE id = ?;
-    `);
+        try {
+          checked.forEach(cb => {
+            const id = parseInt(cb.getAttribute('data-id'), 10);
+            if (!Number.isFinite(id)) return;
 
-    checked.forEach(cb => {
-      const id = parseInt(cb.getAttribute('data-id'), 10);
-      if (!Number.isFinite(id)) return;
-
-      stmt.run([
-        projVal,
-        notesVal,
-        procVal,
-        statusVal,
-        speciesVal,
-        modelVal,
-        tissueVal,
-        typeVal,
-        id,
-      ]);
-    });
-
-    stmt.free();
-
-    if (wantStoragePatch) {
-      const updBox = appState.db.prepare(`
-        UPDATE samples
-        SET box_id = ?, updated_at = datetime('now')
-        WHERE id = ?;
-      `);
-
-      checked.forEach(cb => {
-        const id = parseInt(cb.getAttribute('data-id'), 10);
-        if (!Number.isFinite(id)) return;
-
-        const cur = queryAll(`
-          SELECT b.storage_temperature, b.freezer_no, b.rack, b.box_label
-          FROM samples s
-          LEFT JOIN boxes b ON s.box_id = b.id
-          WHERE s.id = ?
-          LIMIT 1;
-        `, [id])[0] || {};
-
-        const curTemp = (cur.storage_temperature || '').trim();
-        const curFreezer = (cur.freezer_no || '').trim();
-        const curRack = (cur.rack || '').trim();
-        const curLabel = (cur.box_label || '').trim();
-
-        const newTemp = tempRaw || curTemp;
-        const newFreezer = freezerRaw || curFreezer;
-        const newRack = rackRaw || curRack;
-        const newLabel = boxLabelRaw || curLabel;
-
-        if (!(newTemp || newFreezer || newRack || newLabel)) return;
-
-        let boxId = null;
-        const existing = queryAll(`
-          SELECT id
-          FROM boxes
-          WHERE storage_temperature = ?
-            AND freezer_no = ?
-            AND rack = ?
-            AND box_label = ?
-          LIMIT 1
-        `, [newTemp || '', newFreezer || '', newRack || '', newLabel || '']);
-
-        if (existing.length > 0) {
-          boxId = existing[0].id;
-        } else {
-          const insertBoxStmt = appState.db.prepare(`
-            INSERT INTO boxes (storage_temperature, freezer_no, rack, box_label)
-            VALUES (?, ?, ?, ?);
-          `);
-          insertBoxStmt.run([newTemp || '', newFreezer || '', newRack || '', newLabel || '']);
-          insertBoxStmt.free();
-          boxId = queryAll('SELECT last_insert_rowid() AS id;')[0].id;
+            stmt.run([
+              projVal,
+              notesVal,
+              procVal,
+              statusVal,
+              speciesVal,
+              modelVal,
+              tissueVal,
+              typeVal,
+              id,
+            ]);
+          });
+        } finally {
+          stmt.free();
         }
 
-        updBox.run([boxId, id]);
+        if (!wantStoragePatch) return;
+
+        const updBox = appState.db.prepare(`
+          UPDATE samples
+          SET box_id = ?, updated_at = datetime('now')
+          WHERE id = ?;
+        `);
+
+        try {
+          checked.forEach(cb => {
+            const id = parseInt(cb.getAttribute('data-id'), 10);
+            if (!Number.isFinite(id)) return;
+
+            const cur = queryAll(`
+              SELECT b.storage_temperature, b.freezer_no, b.rack, b.box_label
+              FROM samples s
+              LEFT JOIN boxes b ON s.box_id = b.id
+              WHERE s.id = ?
+              LIMIT 1;
+            `, [id])[0] || {};
+
+            const curTemp = (cur.storage_temperature || '').trim();
+            const curFreezer = (cur.freezer_no || '').trim();
+            const curRack = (cur.rack || '').trim();
+            const curLabel = (cur.box_label || '').trim();
+
+            const newTemp = tempRaw || curTemp;
+            const newFreezer = freezerRaw || curFreezer;
+            const newRack = rackRaw || curRack;
+            const newLabel = boxLabelRaw || curLabel;
+
+            if (!(newTemp || newFreezer || newRack || newLabel)) return;
+
+            const boxId = getOrCreateBoxId({
+              storage_temperature: newTemp,
+              freezer_no: newFreezer,
+              rack: newRack,
+              box_label: newLabel,
+            });
+
+            updBox.run([boxId, id]);
+          });
+        } finally {
+          updBox.free();
+        }
       });
-
-      updBox.free();
+    } catch (err) {
+      console.error('Batch edit failed, rolled back.', err);
+      alert('Batch edit failed. No changes were saved; please check console for details.');
+      return;
     }
-
-    appState.db.run('COMMIT;');
 
     if (typeof makeDbDirty === 'function') {
       makeDbDirty();

@@ -1,5 +1,6 @@
 import { appState } from '../state.js';
-import { queryAll } from '../db/query.js';
+import { queryAll, withTransaction } from '../db/query.js';
+import { getOrCreateBoxId } from '../db/boxes.js';
 import { cellToString, parseSeqFromSampleId } from '../utils/string.js';
 
 export function bindImportExportEvents({ refreshAllViews, makeDbDirty } = {}) {
@@ -215,141 +216,120 @@ function bindImportSamples({ refreshAllViews, makeDbDirty } = {}) {
 
       const nextSeqByDate = {};
 
-      appState.db.run('BEGIN TRANSACTION;');
-
       try {
-        rows.forEach(r => {
-          let sample_id = cellToString(r.sample_id);
-          const date = cellToString(r.date);
+        withTransaction(() => {
+          rows.forEach(r => {
+            let sample_id = cellToString(r.sample_id);
+            const date = cellToString(r.date);
 
-          if (!sample_id) {
-            if (!date || date.length !== 8) {
-              skippedNoId++;
-              return;
-            }
-
-            if (nextSeqByDate[date] === undefined) {
-              const existing = queryAll(
-                `SELECT sample_id
-                 FROM samples
-                 WHERE date = ?
-                 ORDER BY sample_id DESC
-                 LIMIT 1;`,
-                [date]
-              );
-
-              let baseSeq = 0;
-              if (existing.length > 0 && existing[0].sample_id) {
-                baseSeq = parseSeqFromSampleId(existing[0].sample_id);
+            if (!sample_id) {
+              if (!date || date.length !== 8) {
+                skippedNoId++;
+                return;
               }
-              nextSeqByDate[date] = baseSeq + 1;
+
+              if (nextSeqByDate[date] === undefined) {
+                const existing = queryAll(
+                  `SELECT sample_id
+                   FROM samples
+                   WHERE date = ?
+                   ORDER BY sample_id DESC
+                   LIMIT 1;`,
+                  [date]
+                );
+
+                let baseSeq = 0;
+                if (existing.length > 0 && existing[0].sample_id) {
+                  baseSeq = parseSeqFromSampleId(existing[0].sample_id);
+                }
+                nextSeqByDate[date] = baseSeq + 1;
+              }
+
+              const seq = nextSeqByDate[date];
+              const seqStr = String(seq).padStart(3, '0');
+              sample_id = `${date}-${seqStr}`;
+              nextSeqByDate[date] = seq + 1;
             }
 
-            const seq = nextSeqByDate[date];
-            const seqStr = String(seq).padStart(3, '0');
-            sample_id = `${date}-${seqStr}`;
-            nextSeqByDate[date] = seq + 1;
-          }
+            const experiment_label = cellToString(r.experiment_label);
+            const species_genotype = cellToString(r.species_genotype);
+            const model = cellToString(r.model);
+            const tissue = cellToString(r.tissue);
+            const sample_type = cellToString(r.sample_type);
+            const notes = cellToString(r.notes);
+            const processing = cellToString(r.processing);
+            const parent_sample_id = cellToString(r.parent_sample_id);
+            const amount = cellToString(r.amount);
+            const project = cellToString(r.project);
+            const status = cellToString(r.status) || 'available';
 
-          const experiment_label = cellToString(r.experiment_label);
-          const species_genotype = cellToString(r.species_genotype);
-          const model = cellToString(r.model);
-          const tissue = cellToString(r.tissue);
-          const sample_type = cellToString(r.sample_type);
-          const notes = cellToString(r.notes);
-          const processing = cellToString(r.processing);
-          const parent_sample_id = cellToString(r.parent_sample_id);
-          const amount = cellToString(r.amount);
-          const project = cellToString(r.project);
-          const status = cellToString(r.status) || 'available';
+            const storage_temperature = cellToString(r.storage_temperature);
+            const freezer_no = cellToString(r.freezer_no);
+            const rack = cellToString(r.rack);
+            const box_label = cellToString(r.box_label);
 
-          const storage_temperature = cellToString(r.storage_temperature);
-          const freezer_no = cellToString(r.freezer_no);
-          const rack = cellToString(r.rack);
-          const box_label = cellToString(r.box_label);
+            const hasAnyStorage =
+              storage_temperature || freezer_no || rack || box_label;
 
-          const hasAnyStorage =
-            storage_temperature || freezer_no || rack || box_label;
+            if (hasAnyStorage) {
+              if (!storage_temperature) missingTemp++;
+              if (!freezer_no) missingFreezer++;
+              if (!rack) missingRack++;
+              if (!box_label) missingBoxLabel++;
+            }
 
-          if (hasAnyStorage) {
-            if (!storage_temperature) missingTemp++;
-            if (!freezer_no) missingFreezer++;
-            if (!rack) missingRack++;
-            if (!box_label) missingBoxLabel++;
-          }
+            const boxId = box_label
+              ? getOrCreateBoxId({
+                  storage_temperature,
+                  freezer_no,
+                  rack,
+                  box_label,
+                })
+              : null;
 
-          let boxId = null;
+            let insertStmt = null;
 
-          if (box_label) {
-            const existingBox = queryAll(
-              `SELECT id FROM boxes
-               WHERE storage_temperature = ? AND freezer_no = ? AND rack = ? AND box_label = ?
-               LIMIT 1`,
-              [storage_temperature || '', freezer_no || '', rack || '', box_label]
-            );
-
-            if (existingBox.length > 0) {
-              boxId = existingBox[0].id;
-            } else {
-              const insertBoxStmt = appState.db.prepare(`
-                INSERT INTO boxes (storage_temperature, freezer_no, rack, box_label)
-                VALUES (?, ?, ?, ?);
+            try {
+              insertStmt = appState.db.prepare(`
+                INSERT INTO samples
+                  (sample_id, date, experiment_label, species_genotype, model, tissue, sample_type, notes,
+                   processing, parent_sample_id, amount, project, status, box_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
               `);
-              insertBoxStmt.run([
-                storage_temperature || '',
-                freezer_no || '',
-                rack || '',
-                box_label,
+
+              insertStmt.run([
+                sample_id || null,
+                date || null,
+                experiment_label || null,
+                species_genotype || null,
+                model || null,
+                tissue || null,
+                sample_type || null,
+                notes || null,
+                processing || null,
+                parent_sample_id || null,
+                amount || null,
+                project || null,
+                status || null,
+                boxId,
               ]);
-              insertBoxStmt.free();
 
-              const row = queryAll('SELECT last_insert_rowid() AS id;')[0];
-              boxId = row.id;
+              imported++;
+            } catch (err) {
+              const msg = String(err);
+              if (msg.includes('UNIQUE constraint failed: samples.sample_id')) {
+                skippedDuplicate++;
+              } else {
+                console.error('Error inserting row', sample_id, err);
+                otherErrors++;
+              }
+            } finally {
+              if (insertStmt) insertStmt.free();
             }
-          }
-
-          try {
-            const insertStmt = appState.db.prepare(`
-              INSERT INTO samples
-                (sample_id, date, experiment_label, species_genotype, model, tissue, sample_type, notes,
-                 processing, parent_sample_id, amount, project, status, box_id)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            `);
-
-            insertStmt.run([
-              sample_id || null,
-              date || null,
-              experiment_label || null,
-              species_genotype || null,
-              model || null,
-              tissue || null,
-              sample_type || null,
-              notes || null,
-              processing || null,
-              parent_sample_id || null,
-              amount || null,
-              project || null,
-              status || null,
-              boxId,
-            ]);
-
-            insertStmt.free();
-            imported++;
-          } catch (err) {
-            const msg = String(err);
-            if (msg.includes('UNIQUE constraint failed: samples.sample_id')) {
-              skippedDuplicate++;
-            } else {
-              console.error('Error inserting row', sample_id, err);
-              otherErrors++;
-            }
-          }
+          });
         });
-
-        appState.db.run('COMMIT;');
       } catch (e2) {
         console.error('Import failed, rolling back.', e2);
-        appState.db.run('ROLLBACK;');
         alert('导入过程中出现错误，已回滚。请检查控制台错误信息。');
         return;
       }

@@ -1,5 +1,6 @@
 import { appState } from '../state.js';
-import { queryAll } from '../db/query.js';
+import { withTransaction } from '../db/query.js';
+import { getOrCreateBoxId } from '../db/boxes.js';
 import {
   addFreezerToListByTemp,
   refreshFreezerMenus,
@@ -88,9 +89,6 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
       if (wrap) wrap.classList.add('hidden');
     }
 
-    appState.db.run('BEGIN TRANSACTION;');
-
-    let boxId = null;
     const hasAnyStorage =
       sample.storage_temperature ||
       sample.freezer_no ||
@@ -101,108 +99,95 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
       // optional warning
     }
 
-    if (sample.box_label) {
-      const existingBox = queryAll(
-        `SELECT id FROM boxes
-         WHERE storage_temperature = ? AND freezer_no = ? AND rack = ? AND box_label = ?
-         LIMIT 1`,
-        [
-          sample.storage_temperature || '',
-          sample.freezer_no || '',
-          sample.rack || '',
-          sample.box_label,
-        ]
-      );
+    try {
+      withTransaction(() => {
+        const boxId = sample.box_label
+          ? getOrCreateBoxId(sample)
+          : null;
 
-      if (existingBox.length > 0) {
-        boxId = existingBox[0].id;
+        if (sampleRowId) {
+          const updateStmt = appState.db.prepare(`
+            UPDATE samples SET
+              sample_id = ?,
+              date = ?,
+              experiment_label = ?,
+              species_genotype = ?,
+              model = ?,
+              tissue = ?,
+              sample_type = ?,
+              notes = ?,
+              processing = ?,
+              parent_sample_id = ?,
+              amount = ?,
+              project = ?,
+              status = ?,
+              box_id = ?,
+              updated_at = datetime('now')
+            WHERE id = ?;
+          `);
+
+          try {
+            updateStmt.run([
+              sample.sample_id,
+              sample.date,
+              sample.experiment_label,
+              sample.species_genotype,
+              sample.model,
+              sample.tissue,
+              sample.sample_type,
+              sample.notes,
+              sample.processing,
+              sample.parent_sample_id,
+              sample.amount,
+              sample.project,
+              sample.status,
+              boxId,
+              parseInt(sampleRowId, 10),
+            ]);
+          } finally {
+            updateStmt.free();
+          }
+        } else {
+          const insertStmt = appState.db.prepare(`
+            INSERT INTO samples
+              (sample_id, date, experiment_label, species_genotype, model, tissue, sample_type, notes,
+               processing, parent_sample_id, amount, project, status, box_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          `);
+
+          try {
+            insertStmt.run([
+              sample.sample_id,
+              sample.date,
+              sample.experiment_label,
+              sample.species_genotype,
+              sample.model,
+              sample.tissue,
+              sample.sample_type,
+              sample.notes,
+              sample.processing,
+              sample.parent_sample_id,
+              sample.amount,
+              sample.project,
+              sample.status,
+              boxId,
+            ]);
+          } finally {
+            insertStmt.free();
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Failed to save sample:', err);
+
+      if (String(err).includes('UNIQUE constraint failed: samples.sample_id')) {
+        alert(`Sample ID already exists: ${sample.sample_id}`);
       } else {
-        const insertBoxStmt = appState.db.prepare(`
-          INSERT INTO boxes (storage_temperature, freezer_no, rack, box_label)
-          VALUES (?, ?, ?, ?);
-        `);
-        insertBoxStmt.run([
-          sample.storage_temperature || '',
-          sample.freezer_no || '',
-          sample.rack || '',
-          sample.box_label,
-        ]);
-        insertBoxStmt.free();
-
-        const row = queryAll('SELECT last_insert_rowid() AS id;')[0];
-        boxId = row.id;
+        alert('Failed to save sample. Please check console for details.');
       }
+
+      return;
     }
-
-    if (sampleRowId) {
-      const updateStmt = appState.db.prepare(`
-        UPDATE samples SET
-          sample_id = ?,
-          date = ?,
-          experiment_label = ?,
-          species_genotype = ?,
-          model = ?,
-          tissue = ?,
-          sample_type = ?,
-          notes = ?,
-          processing = ?,
-          parent_sample_id = ?,
-          amount = ?,
-          project = ?,
-          status = ?,
-          box_id = ?,
-          updated_at = datetime('now')
-        WHERE id = ?;
-      `);
-
-      updateStmt.run([
-        sample.sample_id,
-        sample.date,
-        sample.experiment_label,
-        sample.species_genotype,
-        sample.model,
-        sample.tissue,
-        sample.sample_type,
-        sample.notes,
-        sample.processing,
-        sample.parent_sample_id,
-        sample.amount,
-        sample.project,
-        sample.status,
-        boxId,
-        parseInt(sampleRowId, 10),
-      ]);
-
-      updateStmt.free();
-    } else {
-      const insertStmt = appState.db.prepare(`
-        INSERT INTO samples
-          (sample_id, date, experiment_label, species_genotype, model, tissue, sample_type, notes,
-           processing, parent_sample_id, amount, project, status, box_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-      `);
-
-      insertStmt.run([
-        sample.sample_id,
-        sample.date,
-        sample.experiment_label,
-        sample.species_genotype,
-        sample.model,
-        sample.tissue,
-        sample.sample_type,
-        sample.notes,
-        sample.processing,
-        sample.parent_sample_id,
-        sample.amount,
-        sample.project,
-        sample.status,
-        boxId,
-      ]);
-
-      insertStmt.free();
-    }
-
-    appState.db.run('COMMIT;');
 
     if (typeof makeDbDirty === 'function') {
       makeDbDirty();

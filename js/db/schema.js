@@ -53,6 +53,31 @@ export function initSchema() {
       );
     `);
 
+    appState.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_samples_date
+      ON samples(date);
+    `);
+
+    appState.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_samples_status
+      ON samples(status);
+    `);
+
+    appState.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_samples_box_id
+      ON samples(box_id);
+    `);
+
+    appState.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_samples_project
+      ON samples(project);
+    `);
+
+    appState.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_boxes_location
+      ON boxes(storage_temperature, freezer_no, rack, box_label);
+    `);
+
     // 初始化版本信息
     let v = parseInt(getMeta('version', '0'), 10);
     if (Number.isNaN(v) || v < 1) {

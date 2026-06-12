@@ -1,5 +1,5 @@
 import { appState } from '../state.js';
-import { queryAll } from '../db/query.js';
+import { queryAll, withTransaction } from '../db/query.js';
 import {
   SECONDARY_SAMPLE_PRESETS,
   SECONDARY_TYPE_SHORT,
@@ -443,52 +443,53 @@ function bindWizardStepEvents({ refreshAllViews, makeDbDirty } = {}) {
 
       const today = getTodayYMD();
 
-      appState.db.run('BEGIN TRANSACTION;');
-
       try {
-        const insertStmt = appState.db.prepare(`
-          INSERT INTO samples
-            (sample_id, date, experiment_label, species_genotype, model, tissue,
-             sample_type, notes, processing, parent_sample_id, amount, project, status, box_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        `);
+        withTransaction(() => {
+          const insertStmt = appState.db.prepare(`
+            INSERT INTO samples
+              (sample_id, date, experiment_label, species_genotype, model, tissue,
+               sample_type, notes, processing, parent_sample_id, amount, project, status, box_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          `);
 
-        wizardPrimaryIds.forEach(pid => {
-          const row = queryAll('SELECT * FROM samples WHERE id = ? LIMIT 1;', [pid])[0];
-          if (!row) return;
+          try {
+            wizardPrimaryIds.forEach(pid => {
+              const row = queryAll('SELECT * FROM samples WHERE id = ? LIMIT 1;', [pid])[0];
+              if (!row) return;
 
-          wizardTypes.forEach(t => {
-            const key = normalizeTypeKey(t);
-            const processing = wizardProcessingByType[key] || '';
-            const abbrev = getTypeAbbrev(key);
-            if (!abbrev) return;
+              wizardTypes.forEach(t => {
+                const key = normalizeTypeKey(t);
+                const processing = wizardProcessingByType[key] || '';
+                const abbrev = getTypeAbbrev(key);
+                if (!abbrev) return;
 
-            const parentSid = row.sample_id || '';
-            if (!parentSid) return;
+                const parentSid = row.sample_id || '';
+                if (!parentSid) return;
 
-            const newSid = generateUniqueChildSampleId(parentSid, abbrev);
+                const newSid = generateUniqueChildSampleId(parentSid, abbrev);
 
-            insertStmt.run([
-              newSid,
-              today,
-              row.experiment_label || '',
-              row.species_genotype || '',
-              row.model || '',
-              row.tissue || '',
-              key,
-              row.notes || '',
-              processing,
-              row.id,
-              null,
-              row.project || '',
-              'available',
-              null,
-            ]);
-          });
+                insertStmt.run([
+                  newSid,
+                  today,
+                  row.experiment_label || '',
+                  row.species_genotype || '',
+                  row.model || '',
+                  row.tissue || '',
+                  key,
+                  row.notes || '',
+                  processing,
+                  row.id,
+                  null,
+                  row.project || '',
+                  'available',
+                  null,
+                ]);
+              });
+            });
+          } finally {
+            insertStmt.free();
+          }
         });
-
-        insertStmt.free();
-        appState.db.run('COMMIT;');
 
         if (typeof makeDbDirty === 'function') {
           makeDbDirty();
@@ -501,12 +502,6 @@ function bindWizardStepEvents({ refreshAllViews, makeDbDirty } = {}) {
         closeWizard();
         alert('Secondary samples generated.');
       } catch (err) {
-        try {
-          appState.db.run('ROLLBACK;');
-        } catch (_) {
-          // ignore
-        }
-
         alert('Error while generating secondary samples: ' + err);
       }
     });

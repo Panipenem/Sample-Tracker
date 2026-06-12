@@ -46,3 +46,16 @@ export function rollbackTransaction() {
     console.warn('Rollback failed:', e);
   }
 }
+
+export function withTransaction(callback) {
+  beginTransaction();
+
+  try {
+    const result = callback();
+    commitTransaction();
+    return result;
+  } catch (err) {
+    rollbackTransaction();
+    throw err;
+  }
+}
