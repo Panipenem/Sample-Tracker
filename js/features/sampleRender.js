@@ -1,8 +1,16 @@
 import { appState } from '../state.js';
-import { queryAll } from '../db/query.js';
+import { recordSampleEvent } from '../db/audit.js';
+import { queryAll, withTransaction } from '../db/query.js';
 import { ensureSelectHasValue } from '../utils/select.js';
 import { escapeHtml } from '../utils/string.js';
 import { setActiveTab } from './tabs.js';
+
+const PAGE_SIZE = 100;
+
+const tableState = {
+  samplesPage: 1,
+  archivedPage: 1,
+};
 
 export function isArchivedStatus(status) {
   if (!status) return false;
@@ -12,8 +20,88 @@ export function isArchivedStatus(status) {
     s === 'archived' ||
     s === 'retired' ||
     s === 'discarded' ||
-    s === 'consumed'
+    s === 'consumed' ||
+    s === 'deleted'
   );
+}
+
+export function resetSamplePagination() {
+  tableState.samplesPage = 1;
+}
+
+export function resetArchivedPagination() {
+  tableState.archivedPage = 1;
+}
+
+function buildSearchWhere(search, fields) {
+  if (!search) {
+    return { clause: '', params: [] };
+  }
+
+  const like = `%${search.toLowerCase()}%`;
+  const parts = fields.map(field => `LOWER(COALESCE(${field}, '')) LIKE ?`);
+
+  return {
+    clause: ` AND (${parts.join(' OR ')})`,
+    params: fields.map(() => like),
+  };
+}
+
+function getSampleSelectSql(whereClause = '') {
+  return `
+    SELECT s.id,
+           s.sample_id,
+           s.date,
+           s.experiment_label,
+           s.species_genotype,
+           s.model,
+           s.tissue,
+           s.sample_type,
+           s.processing,
+           s.notes,
+           s.project,
+           s.status,
+           b.storage_temperature,
+           b.freezer_no,
+           b.rack,
+           b.box_label
+    FROM samples s
+    LEFT JOIN boxes b ON s.box_id = b.id
+    WHERE ${whereClause}
+    ORDER BY s.date ASC, s.sample_id ASC
+    LIMIT ? OFFSET ?;
+  `;
+}
+
+function renderPager({
+  infoId,
+  prevId,
+  nextId,
+  page,
+  total,
+  onPrev,
+  onNext,
+}) {
+  const info = document.getElementById(infoId);
+  const prev = document.getElementById(prevId);
+  const next = document.getElementById(nextId);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  if (info) {
+    const start = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+    const end = Math.min(total, page * PAGE_SIZE);
+    info.textContent = `${start}-${end} / ${total} (page ${page}/${totalPages})`;
+  }
+
+  if (prev) {
+    prev.disabled = page <= 1;
+    prev.onclick = onPrev;
+  }
+
+  if (next) {
+    next.disabled = page >= totalPages;
+    next.onclick = onNext;
+  }
 }
 
 export function renderSamples({
@@ -34,54 +122,43 @@ export function renderSamples({
 
   const statusFilter = document.getElementById('status-filter').value;
 
-  const rows = queryAll(`
-    SELECT s.id, 
-           s.sample_id,
-           s.date, 
-           s.experiment_label,
-           s.species_genotype, 
-           s.model, 
-           s.tissue, 
-           s.sample_type,
-           s.processing,
-           s.notes,
-           s.project, 
-           s.status,
-           b.storage_temperature, 
-           b.freezer_no, 
-           b.rack, 
-           b.box_label
-    FROM samples s
-    LEFT JOIN boxes b ON s.box_id = b.id
-    ORDER BY s.date ASC, s.sample_id ASC;
-  `);
+  const searchWhere = buildSearchWhere(search, [
+    's.sample_id',
+    's.tissue',
+    's.model',
+    's.project',
+    's.processing',
+    's.species_genotype',
+    's.experiment_label',
+  ]);
 
-  const filtered = rows.filter(row => {
-    if (isArchivedStatus(row.status)) return false;
+  const whereParts = [
+    `(s.status IS NULL OR s.status NOT IN ('archived','retired','discarded','consumed','deleted'))`,
+  ];
+  const params = [];
 
-    const text = [
-      row.sample_id || '',
-      row.tissue || '',
-      row.model || '',
-      row.project || '',
-      row.processing || '',
-      row.species_genotype || '',
-      row.experiment_label || '',
-    ]
-      .join(' ')
-      .toLowerCase();
+  if (statusFilter) {
+    whereParts.push('LOWER(COALESCE(s.status, \'\')) = ?');
+    params.push(statusFilter.toLowerCase());
+  }
 
-    if (search && !text.includes(search)) return false;
-
-    if (statusFilter) {
-      if (!row.status) return false;
-      if (String(row.status).toLowerCase() !== statusFilter.toLowerCase()) {
-        return false;
-      }
-    }
-
-    return true;
-  });
+  const whereClause = whereParts.join(' AND ') + searchWhere.clause;
+  const whereParams = params.concat(searchWhere.params);
+  const totalRow = queryAll(
+    `SELECT COUNT(*) AS c
+     FROM samples s
+     LEFT JOIN boxes b ON s.box_id = b.id
+     WHERE ${whereClause};`,
+    whereParams
+  )[0] || { c: 0 };
+  const total = Number(totalRow.c) || 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  tableState.samplesPage = Math.min(tableState.samplesPage, totalPages);
+  const offset = (tableState.samplesPage - 1) * PAGE_SIZE;
+  const filtered = queryAll(
+    getSampleSelectSql(whereClause),
+    whereParams.concat([PAGE_SIZE, offset])
+  );
 
   filtered.forEach(row => {
     const tr = document.createElement('tr');
@@ -156,6 +233,22 @@ export function renderSamples({
   if (selectAll) {
     selectAll.checked = false;
   }
+
+  renderPager({
+    infoId: 'samples-page-info',
+    prevId: 'samples-prev-page',
+    nextId: 'samples-next-page',
+    page: tableState.samplesPage,
+    total,
+    onPrev: () => {
+      tableState.samplesPage = Math.max(1, tableState.samplesPage - 1);
+      renderSamples({ makeDbDirty, refreshAllViews, loadSampleToForm });
+    },
+    onNext: () => {
+      tableState.samplesPage = Math.min(totalPages, tableState.samplesPage + 1);
+      renderSamples({ makeDbDirty, refreshAllViews, loadSampleToForm });
+    },
+  });
 }
 
 function bindRowActionButtons({
@@ -187,11 +280,24 @@ function bindRowActionButtons({
 
       if (!appState.db) return;
 
-      const stmt = appState.db.prepare(
-        'UPDATE samples SET status = ? WHERE id = ?'
-      );
-      stmt.run(['archived', id]);
-      stmt.free();
+      withTransaction(() => {
+        const stmt = appState.db.prepare(
+          'UPDATE samples SET status = ?, deleted_at = NULL, updated_at = datetime(\'now\') WHERE id = ?'
+        );
+
+        try {
+          stmt.run(['archived', id]);
+        } finally {
+          stmt.free();
+        }
+
+        recordSampleEvent({
+          sampleRowId: id,
+          sampleId: sid,
+          action: 'archive',
+          details: { source: 'row_button' },
+        });
+      });
 
       if (typeof makeDbDirty === 'function') {
         makeDbDirty();
@@ -211,7 +317,7 @@ function bindRowActionButtons({
 
       if (
         !confirm(
-          `Permanently DELETE ${label}? Use this only for erroneous entries. This cannot be undone.`
+          `Mark ${label} as deleted? The record will be kept in the database.`
         )
       ) {
         return;
@@ -219,9 +325,24 @@ function bindRowActionButtons({
 
       if (!appState.db) return;
 
-      const stmt = appState.db.prepare('DELETE FROM samples WHERE id = ?');
-      stmt.run([id]);
-      stmt.free();
+      withTransaction(() => {
+        const stmt = appState.db.prepare(
+          'UPDATE samples SET status = ?, deleted_at = datetime(\'now\'), updated_at = datetime(\'now\') WHERE id = ?'
+        );
+
+        try {
+          stmt.run(['deleted', id]);
+        } finally {
+          stmt.free();
+        }
+
+        recordSampleEvent({
+          sampleRowId: id,
+          sampleId: sid,
+          action: 'delete',
+          details: { source: 'row_button', mode: 'soft_delete' },
+        });
+      });
 
       if (typeof makeDbDirty === 'function') {
         makeDbDirty();
@@ -246,46 +367,34 @@ export function renderArchivedSamples() {
     .value.trim()
     .toLowerCase();
 
-  const rows = queryAll(`
-    SELECT s.id, 
-           s.sample_id,
-           s.date, 
-           s.experiment_label,
-           s.species_genotype, 
-           s.model, 
-           s.tissue, 
-           s.sample_type,
-           s.processing,
-           s.notes,
-           s.project, 
-           s.status,
-           b.storage_temperature, 
-           b.freezer_no, 
-           b.rack, 
-           b.box_label
-    FROM samples s
-    LEFT JOIN boxes b ON s.box_id = b.id
-    ORDER BY s.date ASC, s.sample_id ASC;
-  `);
-
-  const filtered = rows.filter(row => {
-    if (!isArchivedStatus(row.status)) return false;
-
-    const text = [
-      row.sample_id || '',
-      row.tissue || '',
-      row.model || '',
-      row.project || '',
-      row.processing || '',
-      row.species_genotype || '',
-      row.experiment_label || '',
-    ]
-      .join(' ')
-      .toLowerCase();
-
-    if (search && !text.includes(search)) return false;
-    return true;
-  });
+  const searchWhere = buildSearchWhere(search, [
+    's.sample_id',
+    's.tissue',
+    's.model',
+    's.project',
+    's.processing',
+    's.species_genotype',
+    's.experiment_label',
+  ]);
+  const whereClause =
+    `(s.status IN ('archived','retired','discarded','consumed','deleted'))` +
+    searchWhere.clause;
+  const whereParams = searchWhere.params;
+  const totalRow = queryAll(
+    `SELECT COUNT(*) AS c
+     FROM samples s
+     LEFT JOIN boxes b ON s.box_id = b.id
+     WHERE ${whereClause};`,
+    whereParams
+  )[0] || { c: 0 };
+  const total = Number(totalRow.c) || 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  tableState.archivedPage = Math.min(tableState.archivedPage, totalPages);
+  const offset = (tableState.archivedPage - 1) * PAGE_SIZE;
+  const filtered = queryAll(
+    getSampleSelectSql(whereClause),
+    whereParams.concat([PAGE_SIZE, offset])
+  );
 
   filtered.forEach(row => {
     const tr = document.createElement('tr');
@@ -337,6 +446,22 @@ export function renderArchivedSamples() {
   if (selectAll) {
     selectAll.checked = false;
   }
+
+  renderPager({
+    infoId: 'archived-page-info',
+    prevId: 'archived-prev-page',
+    nextId: 'archived-next-page',
+    page: tableState.archivedPage,
+    total,
+    onPrev: () => {
+      tableState.archivedPage = Math.max(1, tableState.archivedPage - 1);
+      renderArchivedSamples();
+    },
+    onNext: () => {
+      tableState.archivedPage = Math.min(totalPages, tableState.archivedPage + 1);
+      renderArchivedSamples();
+    },
+  });
 }
 
 export function loadSampleToForm(id, { refreshFreezerMenus } = {}) {

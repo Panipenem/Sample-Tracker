@@ -1,3 +1,8 @@
+import {
+  resetArchivedPagination,
+  resetSamplePagination,
+} from './sampleRender.js';
+
 export function bindSampleFilterEvents({
   renderSamples,
   renderArchivedSamples,
@@ -5,6 +10,7 @@ export function bindSampleFilterEvents({
   const searchInput = document.getElementById('search-input');
   if (searchInput && typeof renderSamples === 'function') {
     searchInput.addEventListener('input', () => {
+      resetSamplePagination();
       renderSamples();
     });
   }
@@ -12,6 +18,7 @@ export function bindSampleFilterEvents({
   const statusFilter = document.getElementById('status-filter');
   if (statusFilter && typeof renderSamples === 'function') {
     statusFilter.addEventListener('change', () => {
+      resetSamplePagination();
       renderSamples();
     });
   }
@@ -19,6 +26,7 @@ export function bindSampleFilterEvents({
   const archivedSearch = document.getElementById('archived-search-input');
   if (archivedSearch && typeof renderArchivedSamples === 'function') {
     archivedSearch.addEventListener('input', () => {
+      resetArchivedPagination();
       renderArchivedSamples();
     });
   }

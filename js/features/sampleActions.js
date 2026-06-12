@@ -1,6 +1,8 @@
 // js/features/sampleActions.js
 
 import { appState } from '../state.js';
+import { recordSampleEvent } from '../db/audit.js';
+import { queryAll, withTransaction } from '../db/query.js';
 
 export function bindSampleActionEvents({
   makeDbDirty,
@@ -28,16 +30,27 @@ function bindArchiveSelectedButton({ makeDbDirty, refreshAllViews } = {}) {
 
     if (!confirm(`Archive ${checked.length} selected samples?`)) return;
 
-    const stmt = appState.db.prepare(
-      'UPDATE samples SET status = ? WHERE id = ?'
-    );
+    withTransaction(() => {
+      const stmt = appState.db.prepare(
+        'UPDATE samples SET status = ?, deleted_at = NULL, updated_at = datetime(\'now\') WHERE id = ?'
+      );
 
-    checked.forEach(cb => {
-      const id = parseInt(cb.getAttribute('data-id'), 10);
-      stmt.run(['archived', id]);
+      try {
+        checked.forEach(cb => {
+          const id = parseInt(cb.getAttribute('data-id'), 10);
+          const sample = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [id])[0] || {};
+          stmt.run(['archived', id]);
+          recordSampleEvent({
+            sampleRowId: id,
+            sampleId: sample.sample_id,
+            action: 'archive',
+            details: { source: 'bulk_action' },
+          });
+        });
+      } finally {
+        stmt.free();
+      }
     });
-
-    stmt.free();
 
     if (typeof makeDbDirty === 'function') {
       makeDbDirty();
@@ -65,20 +78,33 @@ function bindDeleteSelectedButton({ makeDbDirty, refreshAllViews } = {}) {
 
     if (
       !confirm(
-        `Permanently DELETE ${checked.length} selected samples? This is intended only for erroneous rows.`
+        `Mark ${checked.length} selected samples as deleted? Records will be kept in the database.`
       )
     ) {
       return;
     }
 
-    const stmt = appState.db.prepare('DELETE FROM samples WHERE id = ?');
+    withTransaction(() => {
+      const stmt = appState.db.prepare(
+        'UPDATE samples SET status = ?, deleted_at = datetime(\'now\'), updated_at = datetime(\'now\') WHERE id = ?'
+      );
 
-    checked.forEach(cb => {
-      const id = parseInt(cb.getAttribute('data-id'), 10);
-      stmt.run([id]);
+      try {
+        checked.forEach(cb => {
+          const id = parseInt(cb.getAttribute('data-id'), 10);
+          const sample = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [id])[0] || {};
+          stmt.run(['deleted', id]);
+          recordSampleEvent({
+            sampleRowId: id,
+            sampleId: sample.sample_id,
+            action: 'delete',
+            details: { source: 'bulk_action', mode: 'soft_delete' },
+          });
+        });
+      } finally {
+        stmt.free();
+      }
     });
-
-    stmt.free();
 
     if (typeof makeDbDirty === 'function') {
       makeDbDirty();
@@ -112,16 +138,27 @@ function bindUnarchiveSelectedButton({ makeDbDirty, refreshAllViews } = {}) {
       return;
     }
 
-    const stmt = appState.db.prepare(
-      'UPDATE samples SET status = ? WHERE id = ?'
-    );
+    withTransaction(() => {
+      const stmt = appState.db.prepare(
+        'UPDATE samples SET status = ?, deleted_at = NULL, updated_at = datetime(\'now\') WHERE id = ?'
+      );
 
-    checked.forEach(cb => {
-      const id = parseInt(cb.getAttribute('data-id'), 10);
-      stmt.run([null, id]);
+      try {
+        checked.forEach(cb => {
+          const id = parseInt(cb.getAttribute('data-id'), 10);
+          const sample = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [id])[0] || {};
+          stmt.run(['available', id]);
+          recordSampleEvent({
+            sampleRowId: id,
+            sampleId: sample.sample_id,
+            action: 'unarchive',
+            details: { source: 'bulk_action' },
+          });
+        });
+      } finally {
+        stmt.free();
+      }
     });
-
-    stmt.free();
 
     if (typeof makeDbDirty === 'function') {
       makeDbDirty();
@@ -147,18 +184,31 @@ function bindDeleteArchivedButton({ makeDbDirty, refreshAllViews } = {}) {
       return;
     }
 
-    if (!confirm(`Permanently DELETE ${checked.length} archived samples?`)) {
+    if (!confirm(`Mark ${checked.length} archived samples as deleted? Records will be kept in the database.`)) {
       return;
     }
 
-    const stmt = appState.db.prepare('DELETE FROM samples WHERE id = ?');
+    withTransaction(() => {
+      const stmt = appState.db.prepare(
+        'UPDATE samples SET status = ?, deleted_at = datetime(\'now\'), updated_at = datetime(\'now\') WHERE id = ?'
+      );
 
-    checked.forEach(cb => {
-      const id = parseInt(cb.getAttribute('data-id'), 10);
-      stmt.run([id]);
+      try {
+        checked.forEach(cb => {
+          const id = parseInt(cb.getAttribute('data-id'), 10);
+          const sample = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [id])[0] || {};
+          stmt.run(['deleted', id]);
+          recordSampleEvent({
+            sampleRowId: id,
+            sampleId: sample.sample_id,
+            action: 'delete',
+            details: { source: 'archived_bulk_action', mode: 'soft_delete' },
+          });
+        });
+      } finally {
+        stmt.free();
+      }
     });
-
-    stmt.free();
 
     if (typeof makeDbDirty === 'function') {
       makeDbDirty();

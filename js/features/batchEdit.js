@@ -1,4 +1,5 @@
 import { appState } from '../state.js';
+import { recordSampleEvent } from '../db/audit.js';
 import { queryAll, withTransaction } from '../db/query.js';
 import { getOrCreateBoxId } from '../db/boxes.js';
 import { getBatchFreezerNoFromUI } from './freezerSelect.js';
@@ -191,6 +192,7 @@ function bindApplyBatchEdit(
           checked.forEach(cb => {
             const id = parseInt(cb.getAttribute('data-id'), 10);
             if (!Number.isFinite(id)) return;
+            const sample = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [id])[0] || {};
 
             stmt.run([
               projVal,
@@ -203,6 +205,26 @@ function bindApplyBatchEdit(
               typeVal,
               id,
             ]);
+
+            recordSampleEvent({
+              sampleRowId: id,
+              sampleId: sample.sample_id,
+              action: 'batch_edit',
+              details: {
+                source: 'batch_edit_modal',
+                fields: {
+                  project: !!projVal,
+                  notes: !!notesVal,
+                  processing: !!procVal,
+                  status: !!statusVal,
+                  species_genotype: !!speciesVal,
+                  model: !!modelVal,
+                  tissue: !!tissueVal,
+                  sample_type: !!typeVal,
+                  storage: wantStoragePatch,
+                },
+              },
+            });
           });
         } finally {
           stmt.free();

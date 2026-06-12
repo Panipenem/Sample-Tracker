@@ -1,6 +1,8 @@
 import { appState } from '../state.js';
+import { recordSampleEvent } from '../db/audit.js';
 import { withTransaction } from '../db/query.js';
 import { getOrCreateBoxId } from '../db/boxes.js';
+import { validateSampleInput } from '../utils/validation.js';
 import {
   addFreezerToListByTemp,
   refreshFreezerMenus,
@@ -73,8 +75,13 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
       box_label: document.getElementById('box_label').value || '',
     };
 
-    if (!sample.sample_id) {
-      alert('Sample ID is required.');
+    const validation = validateSampleInput(sample);
+    if (validation.errors.length > 0) {
+      alert(validation.errors.join('\n'));
+      return;
+    }
+
+    if (validation.warnings.length > 0 && !confirm(validation.warnings.join('\n') + '\n\nContinue saving?')) {
       return;
     }
 
@@ -87,16 +94,6 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
 
       const wrap = document.getElementById('freezer-no-add-wrap');
       if (wrap) wrap.classList.add('hidden');
-    }
-
-    const hasAnyStorage =
-      sample.storage_temperature ||
-      sample.freezer_no ||
-      sample.rack ||
-      sample.box_label;
-
-    if (hasAnyStorage && !sample.box_label) {
-      // optional warning
     }
 
     try {
@@ -147,6 +144,13 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
           } finally {
             updateStmt.free();
           }
+
+          recordSampleEvent({
+            sampleRowId: parseInt(sampleRowId, 10),
+            sampleId: sample.sample_id,
+            action: 'update',
+            details: { source: 'sample_form' },
+          });
         } else {
           const insertStmt = appState.db.prepare(`
             INSERT INTO samples
@@ -175,6 +179,15 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
           } finally {
             insertStmt.free();
           }
+
+          const row = appState.db.exec('SELECT last_insert_rowid() AS id;')[0];
+          const sampleRowIdNew = row?.values?.[0]?.[0] || null;
+          recordSampleEvent({
+            sampleRowId: sampleRowIdNew,
+            sampleId: sample.sample_id,
+            action: 'create',
+            details: { source: 'sample_form' },
+          });
         }
       });
     } catch (err) {

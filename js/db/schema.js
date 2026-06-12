@@ -46,10 +46,28 @@ export function initSchema() {
       );
     `);
 
+    try {
+        appState.db.run(`ALTER TABLE samples ADD COLUMN deleted_at TEXT;`);
+    } catch (e) {
+        // 已经有该列时会报错，忽略即可
+    }
+
     appState.db.run(`
       CREATE TABLE IF NOT EXISTS meta (
         key   TEXT PRIMARY KEY,
         value TEXT
+      );
+    `);
+
+    appState.db.run(`
+      CREATE TABLE IF NOT EXISTS sample_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sample_row_id INTEGER,
+        sample_id TEXT,
+        action TEXT NOT NULL,
+        details_json TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (sample_row_id) REFERENCES samples(id)
       );
     `);
 
@@ -61,6 +79,11 @@ export function initSchema() {
     appState.db.run(`
       CREATE INDEX IF NOT EXISTS idx_samples_status
       ON samples(status);
+    `);
+
+    appState.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_samples_deleted_at
+      ON samples(deleted_at);
     `);
 
     appState.db.run(`
@@ -76,6 +99,16 @@ export function initSchema() {
     appState.db.run(`
       CREATE INDEX IF NOT EXISTS idx_boxes_location
       ON boxes(storage_temperature, freezer_no, rack, box_label);
+    `);
+
+    appState.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_sample_events_sample_row_id
+      ON sample_events(sample_row_id);
+    `);
+
+    appState.db.run(`
+      CREATE INDEX IF NOT EXISTS idx_sample_events_action
+      ON sample_events(action);
     `);
 
     // 初始化版本信息

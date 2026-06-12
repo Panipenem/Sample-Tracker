@@ -22,7 +22,7 @@ export function renderBoxes() {
     FROM boxes b
     LEFT JOIN samples s 
       ON s.box_id = b.id
-     AND (s.status IS NULL OR s.status NOT IN ('archived','retired','discarded','consumed'))
+     AND (s.status IS NULL OR s.status NOT IN ('archived','retired','discarded','consumed','deleted'))
     GROUP BY b.id, b.storage_temperature, b.freezer_no, b.rack, b.box_label
     ORDER BY b.storage_temperature, b.freezer_no, b.rack, b.box_label;
   `);
@@ -123,7 +123,7 @@ export function renderBoxes() {
         SELECT sample_id, status, date, species_genotype, model, tissue, sample_type, processing, project
         FROM samples
         WHERE box_id = ?
-          AND (status IS NULL OR status NOT IN ('archived','retired','discarded','consumed'))
+          AND (status IS NULL OR status NOT IN ('archived','retired','discarded','consumed','deleted'))
         ORDER BY date ASC, sample_id ASC;
       `, [box.id]);
 

@@ -1,4 +1,5 @@
 import { appState } from '../state.js';
+import { recordSampleEvent } from '../db/audit.js';
 import { queryAll, withTransaction } from '../db/query.js';
 import {
   SECONDARY_SAMPLE_PRESETS,
@@ -484,6 +485,18 @@ function bindWizardStepEvents({ refreshAllViews, makeDbDirty } = {}) {
                   'available',
                   null,
                 ]);
+
+                const inserted = queryAll('SELECT last_insert_rowid() AS id;')[0];
+                recordSampleEvent({
+                  sampleRowId: inserted?.id || null,
+                  sampleId: newSid,
+                  action: 'create_secondary',
+                  details: {
+                    source: 'secondary_wizard',
+                    parent_sample_id: parentSid,
+                    type: key,
+                  },
+                });
               });
             });
           } finally {
