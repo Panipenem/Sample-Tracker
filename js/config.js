@@ -1,7 +1,7 @@
 // js/config.js
 
 export const R2_API_BASE = 'https://lims-r2-api.zhanghch0814.workers.dev';
-export const R2_WRITE_TOKEN = 'LIMS-SAMPLE-MANAGER-SQL-2025';
+export const R2_WRITE_TOKEN_STORAGE_KEY = 'LIMS_R2_WRITE_TOKEN';
 
 export const FREEZER_LIST_KEY = 'sampleApp.freezerNoList';
 export const FREEZER_LIST_PREFIX = 'sampleApp.freezerListByTemp.';

@@ -1,6 +1,7 @@
 import { appState } from '../state.js';
 import { queryAll } from '../db/query.js';
 import { ensureSelectHasValue } from '../utils/select.js';
+import { escapeHtml } from '../utils/string.js';
 import { setActiveTab } from './tabs.js';
 
 export function isArchivedStatus(status) {
@@ -104,35 +105,37 @@ export function renderSamples({
         cls += ' tag-low';
       }
 
-      statusHtml = `<span class="${cls}">${row.status}</span>`;
+      statusHtml = `<span class="${cls}">${escapeHtml(row.status)}</span>`;
     }
 
+    const id = Number(row.id) || 0;
+
     tr.innerHTML = `
-      <td><input type="checkbox" class="sample-select" data-id="${row.id}"></td>
-      <td>${row.sample_id || ''}</td>
-      <td>${row.date || ''}</td>
-      <td>${row.experiment_label || ''}</td>
-      <td>${row.species_genotype || ''}</td>
-      <td>${row.model || ''}</td>
-      <td>${row.tissue || ''}</td>
-      <td>${row.sample_type || ''}</td>
-      <td>${row.processing || ''}</td>
-      <td>${row.notes || ''}</td>
-      <td>${row.project || ''}</td>
+      <td><input type="checkbox" class="sample-select" data-id="${id}"></td>
+      <td>${escapeHtml(row.sample_id)}</td>
+      <td>${escapeHtml(row.date)}</td>
+      <td>${escapeHtml(row.experiment_label)}</td>
+      <td>${escapeHtml(row.species_genotype)}</td>
+      <td>${escapeHtml(row.model)}</td>
+      <td>${escapeHtml(row.tissue)}</td>
+      <td>${escapeHtml(row.sample_type)}</td>
+      <td>${escapeHtml(row.processing)}</td>
+      <td>${escapeHtml(row.notes)}</td>
+      <td>${escapeHtml(row.project)}</td>
       <td>${statusHtml}</td>
-      <td>${storageStr}</td>
+      <td>${escapeHtml(storageStr)}</td>
       <td>
-        <button data-id="${row.id}" class="btn-edit">Edit</button>
+        <button data-id="${id}" class="btn-edit">Edit</button>
         <button
-          data-id="${row.id}"
-          data-sample-id="${row.sample_id || ''}"
+          data-id="${id}"
+          data-sample-id="${escapeHtml(row.sample_id)}"
           class="btn-archive"
         >
           Archive
         </button>
         <button
-          data-id="${row.id}"
-          data-sample-id="${row.sample_id || ''}"
+          data-id="${id}"
+          data-sample-id="${escapeHtml(row.sample_id)}"
           class="btn-delete"
         >
           Delete
@@ -306,23 +309,25 @@ export function renderArchivedSamples() {
         cls += ' tag-low';
       }
 
-      statusHtml = `<span class="${cls}">${row.status}</span>`;
+      statusHtml = `<span class="${cls}">${escapeHtml(row.status)}</span>`;
     }
 
+    const id = Number(row.id) || 0;
+
     tr.innerHTML = `
-      <td><input type="checkbox" class="archived-select" data-id="${row.id}"></td>
-      <td>${row.sample_id || ''}</td>
-      <td>${row.date || ''}</td>
-      <td>${row.experiment_label || ''}</td>
-      <td>${row.species_genotype || ''}</td>
-      <td>${row.model || ''}</td>
-      <td>${row.tissue || ''}</td>
-      <td>${row.sample_type || ''}</td>
-      <td>${row.processing || ''}</td>
-      <td>${row.notes || ''}</td>
-      <td>${row.project || ''}</td>
+      <td><input type="checkbox" class="archived-select" data-id="${id}"></td>
+      <td>${escapeHtml(row.sample_id)}</td>
+      <td>${escapeHtml(row.date)}</td>
+      <td>${escapeHtml(row.experiment_label)}</td>
+      <td>${escapeHtml(row.species_genotype)}</td>
+      <td>${escapeHtml(row.model)}</td>
+      <td>${escapeHtml(row.tissue)}</td>
+      <td>${escapeHtml(row.sample_type)}</td>
+      <td>${escapeHtml(row.processing)}</td>
+      <td>${escapeHtml(row.notes)}</td>
+      <td>${escapeHtml(row.project)}</td>
       <td>${statusHtml}</td>
-      <td>${storageStr}</td>
+      <td>${escapeHtml(storageStr)}</td>
     `;
 
     tbody.appendChild(tr);

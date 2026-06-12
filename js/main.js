@@ -4,7 +4,6 @@ import {
 
 import {
   R2_API_BASE,
-  R2_WRITE_TOKEN,
   FREEZER_LIST_KEY,
   FREEZER_LIST_PREFIX,
   LAST_DB_KEY,

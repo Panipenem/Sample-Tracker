@@ -2,6 +2,7 @@ console.log('NEW boxView.js loaded');
 
 import { appState } from '../state.js';
 import { queryAll } from '../db/query.js';
+import { escapeHtml } from '../utils/string.js';
 
 export function renderBoxes() {
   const container = document.getElementById('boxes-container');
@@ -102,8 +103,8 @@ export function renderBoxes() {
       const infoDiv = document.createElement('div');
       const rackText = box.rack ? `Rack: ${box.rack}` : '';
       infoDiv.innerHTML = `
-        <div><strong>${box.box_label || ''}</strong></div>
-        <div class="small">${rackText}${rackText && box.sample_count ? ' · ' : ''}${box.sample_count} tubes</div>
+        <div><strong>${escapeHtml(box.box_label)}</strong></div>
+        <div class="small">${escapeHtml(rackText)}${rackText && box.sample_count ? ' · ' : ''}${escapeHtml(box.sample_count)} tubes</div>
       `;
       cardHeader.appendChild(infoDiv);
 
