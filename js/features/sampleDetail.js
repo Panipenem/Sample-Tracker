@@ -38,6 +38,13 @@ function openSampleDetail(id) {
   if (rows.length === 0) return;
 
   const sample = rows[0];
+  const children = queryAll(`
+    SELECT DISTINCT sample_id, status
+    FROM samples
+    WHERE parent_sample_id = ?
+       OR CAST(parent_sample_id AS TEXT) = CAST(? AS TEXT)
+    ORDER BY sample_id ASC;
+  `, [sample.sample_id || '', id]);
   const events = queryAll(`
     SELECT created_at, action, details_json
     FROM sample_events
@@ -65,7 +72,8 @@ function openSampleDetail(id) {
       ${detailItem('Tissue', sample.tissue)}
       ${detailItem('Type', sample.sample_type)}
       ${detailItem('Processing', sample.processing)}
-      ${detailItem('Parent row ID', sample.parent_sample_id)}
+      ${detailItem('Parent Sample ID', sample.parent_sample_id)}
+      ${detailItem('Child Sample IDs', formatChildSamples(children))}
       ${detailItem('Amount', sample.amount)}
       ${detailItem('Storage', [
         sample.storage_temperature,
@@ -113,6 +121,17 @@ function detailItem(label, value) {
       <strong>${escapeHtml(value || '')}</strong>
     </div>
   `;
+}
+
+function formatChildSamples(children) {
+  if (!children || children.length === 0) return '';
+
+  return children
+    .map(child => child.status
+      ? `${child.sample_id} (${child.status})`
+      : child.sample_id
+    )
+    .join(', ');
 }
 
 function formatDetails(detailsJson) {
