@@ -11,24 +11,23 @@ const SAMPLE_COLUMNS = [
   { key: 'sample_id', label: 'Sample ID', locked: true },
   { key: 'date', label: 'Date', locked: true },
   { key: 'experiment_label', label: 'Exp label' },
-  { key: 'species_genotype', label: 'Species / Genotype' },
-  { key: 'model', label: 'Model' },
+  { key: 'species_genotype', label: 'Species / Genotype', locked: true },
+  { key: 'model', label: 'Model', locked: true },
   { key: 'tissue', label: 'Tissue', locked: true },
-  { key: 'sample_type', label: 'Type', locked: true },
+  { key: 'sample_type', label: 'Type' },
   { key: 'processing', label: 'Processing' },
   { key: 'notes', label: 'Notes' },
-  { key: 'project', label: 'Project', locked: true },
+  { key: 'project', label: 'Project' },
   { key: 'status', label: 'Status', locked: true },
-  { key: 'storage', label: 'Storage', locked: true },
+  { key: 'storage', label: 'Storage' },
 ];
 const DEFAULT_VISIBLE_SAMPLE_COLUMNS = [
   'sample_id',
   'date',
+  'species_genotype',
+  'model',
   'tissue',
-  'sample_type',
-  'project',
   'status',
-  'storage',
 ];
 const LOCKED_SAMPLE_COLUMNS = SAMPLE_COLUMNS
   .filter(column => column.locked)
@@ -390,14 +389,14 @@ function renderSampleColumnMenu() {
 
   const visible = getVisibleSampleColumns();
   menu.innerHTML = SAMPLE_COLUMNS.map(column => `
-    <label>
+    <label class="column-menu-option${column.locked ? ' locked' : ''}">
       <input
         type="checkbox"
         value="${column.key}"
         ${visible.has(column.key) ? 'checked' : ''}
         ${column.locked ? 'disabled' : ''}
       >
-      ${escapeHtml(column.label)}
+      <span>${escapeHtml(column.label)}</span>
     </label>
   `).join('');
 

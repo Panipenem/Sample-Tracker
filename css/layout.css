@@ -182,9 +182,9 @@ main {
   top: calc(100% + 6px);
   z-index: 80;
   display: grid;
-  grid-template-columns: repeat(2, minmax(150px, 1fr));
-  gap: 6px 10px;
-  min-width: 330px;
+  grid-template-columns: repeat(2, minmax(170px, 1fr));
+  gap: 8px 12px;
+  min-width: 380px;
   padding: 10px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
@@ -197,11 +197,28 @@ main {
 }
 
 .column-menu label {
-  display: flex;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
+  column-gap: 8px;
   margin: 0;
   font-size: 12px;
+  line-height: 1.25;
+}
+
+.column-menu input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.column-menu label span {
+  min-width: 0;
+}
+
+.column-menu label.locked span {
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .pager-row {
