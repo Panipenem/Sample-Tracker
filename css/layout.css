@@ -148,3 +148,37 @@ main {
   width: 100%;
   overflow-x: auto;
 }
+
+.column-controls {
+  position: relative;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+.column-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 35;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  gap: 6px 10px;
+  min-width: 330px;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.column-menu.hidden {
+  display: none;
+}
+
+.column-menu label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+}

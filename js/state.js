@@ -4,4 +4,8 @@ export const appState = {
   dbDirty: false,
   currentVersion: 0,
   lastSyncedVersion: 0,
+  remoteVersion: null,
+  remoteUpdatedAt: '',
+  lastR2Status: '',
+  lastR2CheckedAt: '',
 };

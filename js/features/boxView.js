@@ -3,8 +3,21 @@ import { queryAll, runSql, withTransaction } from '../db/query.js';
 import { escapeHtml } from '../utils/string.js';
 import { makeDbDirty } from './dbStatus.js';
 
+const DEFAULT_BOX_CAPACITY = 81;
+
 export function renderBoxes() {
-  const container = document.getElementById('boxes-container');
+  renderBoxContainer({
+    container: document.getElementById('boxes-view-container'),
+    editableCapacity: false,
+  });
+
+  renderBoxContainer({
+    container: document.getElementById('box-capacity-container'),
+    editableCapacity: true,
+  });
+}
+
+function renderBoxContainer({ container, editableCapacity }) {
   if (!container) return;
 
   container.innerHTML = '';
@@ -94,8 +107,8 @@ export function renderBoxes() {
     groupBoxes.forEach(box => {
       const card = document.createElement('div');
       card.className = 'box-card';
-      const capacity = Number(box.capacity) || 0;
-      if (capacity > 0 && Number(box.sample_count) > capacity) {
+      const capacity = normalizeCapacity(box.capacity);
+      if (Number(box.sample_count) > capacity) {
         card.classList.add('box-card-over-capacity');
       }
 
@@ -106,9 +119,7 @@ export function renderBoxes() {
 
       const infoDiv = document.createElement('div');
       const rackText = box.rack ? `Rack: ${box.rack}` : '';
-      const capacityText = capacity > 0
-        ? `${box.sample_count} / ${capacity} tubes`
-        : `${box.sample_count} tubes`;
+      const capacityText = `${box.sample_count} / ${capacity} tubes`;
       infoDiv.innerHTML = `
         <div><strong>${escapeHtml(box.box_label)}</strong></div>
         <div class="small">${escapeHtml(rackText)}${rackText ? ' · ' : ''}${escapeHtml(capacityText)}</div>
@@ -126,24 +137,25 @@ export function renderBoxes() {
 
       card.appendChild(cardHeader);
 
-      const capacityEditor = document.createElement('div');
-      capacityEditor.className = 'box-capacity-row';
-      capacityEditor.innerHTML = `
-        <label class="small" for="box-capacity-${box.id}">Capacity</label>
-        <input
-          id="box-capacity-${box.id}"
-          type="number"
-          min="0"
-          step="1"
-          value="${capacity > 0 ? capacity : ''}"
-          placeholder="optional"
-          data-box-capacity-id="${box.id}"
-        >
-        <button type="button" class="btn-save-box-capacity" data-box-id="${box.id}">Save</button>
-      `;
-      card.appendChild(capacityEditor);
+      if (editableCapacity) {
+        const capacityEditor = document.createElement('div');
+        capacityEditor.className = 'box-capacity-row';
+        capacityEditor.innerHTML = `
+          <label class="small" for="box-capacity-${box.id}">Capacity</label>
+          <input
+            id="box-capacity-${box.id}"
+            type="number"
+            min="1"
+            step="1"
+            value="${capacity}"
+            data-box-capacity-id="${box.id}"
+          >
+          <button type="button" class="btn-save-box-capacity" data-box-id="${box.id}">Save</button>
+        `;
+        card.appendChild(capacityEditor);
+      }
 
-      if (capacity > 0 && Number(box.sample_count) > capacity) {
+      if (Number(box.sample_count) > capacity) {
         const warning = document.createElement('div');
         warning.className = 'small box-capacity-warning';
         warning.textContent = `Over capacity by ${Number(box.sample_count) - capacity} tubes.`;
@@ -244,15 +256,17 @@ export function renderBoxes() {
     container.appendChild(groupDiv);
   });
 
+  if (!editableCapacity) return;
+
   container.querySelectorAll('.btn-save-box-capacity').forEach(btn => {
     btn.addEventListener('click', () => {
       const boxId = parseInt(btn.getAttribute('data-box-id'), 10);
       const input = container.querySelector(`[data-box-capacity-id="${boxId}"]`);
       const rawValue = input?.value || '';
-      const capacity = rawValue.trim() === '' ? null : parseInt(rawValue, 10);
+      const capacity = rawValue.trim() === '' ? DEFAULT_BOX_CAPACITY : parseInt(rawValue, 10);
 
-      if (rawValue.trim() !== '' && (!Number.isFinite(capacity) || capacity < 0)) {
-        alert('Capacity must be empty or a non-negative number.');
+      if (!Number.isFinite(capacity) || capacity < 1) {
+        alert('Capacity must be a positive number.');
         return;
       }
 
@@ -264,4 +278,11 @@ export function renderBoxes() {
       renderBoxes();
     });
   });
+}
+
+function normalizeCapacity(value) {
+  const capacity = Number(value);
+  return Number.isFinite(capacity) && capacity > 0
+    ? capacity
+    : DEFAULT_BOX_CAPACITY;
 }

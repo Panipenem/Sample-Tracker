@@ -49,15 +49,30 @@
       <span id="db-status" style="color:#008000;"></span><br>
       <span id="db-version" style="color:#1a0dab; cursor:pointer;"></span>
     </div>
+    <div id="sync-status-panel" class="sync-status-panel"></div>
   </div>
 
   <!-- Tabs for views -->
   <div class="tabs">
-    <button class="tab-button active" data-tab="form">Data Entry</button>
+    <button class="tab-button active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-button" data-tab="form">Data Entry</button>
     <button class="tab-button" data-tab="samples">Sample List</button>
     <button class="tab-button" data-tab="archived">Archived</button>
     <button class="tab-button" data-tab="quality">Data Quality</button>
+    <button class="tab-button" data-tab="boxes">Box View</button>
     <button class="tab-button" data-tab="settings">Settings</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="section" id="section-dashboard">
+    <h2>Dashboard</h2>
+    <div id="dashboard-summary" class="dashboard-grid"></div>
+    <div class="dashboard-actions">
+      <button type="button" class="tab-jump" data-target-tab="samples">Open Sample List</button>
+      <button type="button" class="tab-jump" data-target-tab="quality">Review Data Quality</button>
+      <button type="button" class="tab-jump" data-target-tab="boxes">Open Box View</button>
+      <button type="button" class="tab-jump" data-target-tab="settings" data-settings-target="audit">Open Audit Log</button>
+    </div>
   </div>
 
   <!-- Sample form -->
@@ -225,6 +240,10 @@
         <input type="text" id="label-export-date" placeholder="如：20250213" maxlength="8">
       </label>
     </div>
+    <div class="column-controls">
+      <button type="button" id="btn-toggle-columns">Columns</button>
+      <div id="sample-column-menu" class="column-menu hidden"></div>
+    </div>
     <div class="flex" style="margin-top:6px;">
       <div>
         <button id="btn-export-xlsx">Export all (.xlsx)</button>
@@ -248,20 +267,20 @@
     <table id="samples-table">
       <thead>
       <tr>
-        <th><input type="checkbox" id="select-all-samples"></th>
-        <th>Sample ID</th>
-        <th>Date</th>
-        <th>Exp label</th>
-        <th>Species / Genotype</th>
-        <th>Model</th>
-        <th>Tissue</th>
-        <th>Type</th>
-        <th>Processing</th>
-        <th>notes</th>
-        <th>Project</th>
-        <th>Status</th>
-        <th>Storage</th>
-        <th>Actions</th>
+        <th data-column="select"><input type="checkbox" id="select-all-samples"></th>
+        <th data-column="sample_id">Sample ID</th>
+        <th data-column="date">Date</th>
+        <th data-column="experiment_label">Exp label</th>
+        <th data-column="species_genotype">Species / Genotype</th>
+        <th data-column="model">Model</th>
+        <th data-column="tissue">Tissue</th>
+        <th data-column="sample_type">Type</th>
+        <th data-column="processing">Processing</th>
+        <th data-column="notes">notes</th>
+        <th data-column="project">Project</th>
+        <th data-column="status">Status</th>
+        <th data-column="storage">Storage</th>
+        <th data-column="actions">Actions</th>
       </tr>
       </thead>
       <tbody></tbody>
@@ -333,6 +352,13 @@
       <tbody></tbody>
     </table>
     </div>
+  </div>
+
+  <!-- Box view -->
+  <div class="section" id="section-boxes">
+    <h2>Box View</h2>
+    <div class="small">Shows current box occupancy. Default capacity is 81 tubes when no custom capacity is set.</div>
+    <div id="boxes-view-container"></div>
   </div>
 
   <!-- Settings -->
@@ -423,8 +449,8 @@
     <!-- Box view -->
     <div class="settings-panel hidden" id="settings-panel-boxes">
       <h3>Box capacity</h3>
-      <div class="small">Capacity is optional. Set it per box to show occupancy such as 32 / 81 tubes.</div>
-      <div id="boxes-container"></div>
+      <div class="small">Default capacity is 81 tubes. Change a box only when it uses a different layout.</div>
+      <div id="box-capacity-container"></div>
     </div>
   </div>
 

@@ -1,8 +1,10 @@
 const TAB_SECTION_IDS = {
+  dashboard: 'section-dashboard',
   form: 'section-form',
   samples: 'section-samples',
   archived: 'section-archived',
   quality: 'section-quality',
+  boxes: 'section-boxes',
   settings: 'section-settings',
 };
 

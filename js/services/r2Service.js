@@ -189,6 +189,10 @@ export async function saveDbToR2({ updateVersionBadge } = {}) {
 
     appState.dbDirty = false;
     appState.lastSyncedVersion = appState.currentVersion;
+    appState.remoteVersion = appState.currentVersion;
+    appState.remoteUpdatedAt = getMeta('updated_at', '');
+    appState.lastR2CheckedAt = new Date().toLocaleString();
+    appState.lastR2Status = 'Synced to R2.';
     localStorage.setItem(
       LAST_SYNC_VERSION_KEY,
       String(appState.lastSyncedVersion)
@@ -230,10 +234,17 @@ export async function checkR2Status({ updateVersionBadge } = {}) {
     const localVersion = appState.currentVersion || 0;
     const remoteVersion = remoteSnapshot?.version || 0;
     const updatedAt = remoteSnapshot?.updatedAt || 'unknown time';
+    appState.remoteVersion = remoteSnapshot ? remoteVersion : null;
+    appState.remoteUpdatedAt = remoteSnapshot ? updatedAt : '';
+    appState.lastR2CheckedAt = new Date().toLocaleString();
 
     if (!remoteSnapshot) {
+      appState.lastR2Status = 'R2 has no database yet.';
       if (statusEl) {
         statusEl.textContent = `R2 has no database yet. Local version: v${localVersion}.`;
+      }
+      if (typeof updateVersionBadge === 'function') {
+        updateVersionBadge();
       }
       return;
     }
@@ -243,6 +254,7 @@ export async function checkR2Status({ updateVersionBadge } = {}) {
       : remoteVersion < localVersion
         ? 'Local is newer than remote'
         : 'Local and remote versions match';
+    appState.lastR2Status = relation;
 
     if (statusEl) {
       statusEl.textContent =
@@ -254,6 +266,11 @@ export async function checkR2Status({ updateVersionBadge } = {}) {
     }
   } catch (err) {
     console.error('R2 status check failed:', err);
+    appState.lastR2Status = 'R2 status check failed.';
+    appState.lastR2CheckedAt = new Date().toLocaleString();
+    if (typeof updateVersionBadge === 'function') {
+      updateVersionBadge();
+    }
     if (statusEl) {
       statusEl.textContent = 'R2 status check failed. See console for details.';
     }
@@ -317,6 +334,10 @@ export async function loadDbFromR2({
     const vStr = getMeta('version', '1');
     appState.currentVersion = parseInt(vStr, 10) || 1;
     appState.lastSyncedVersion = appState.currentVersion;
+    appState.remoteVersion = appState.currentVersion;
+    appState.remoteUpdatedAt = getMeta('updated_at', '');
+    appState.lastR2CheckedAt = new Date().toLocaleString();
+    appState.lastR2Status = 'Loaded DB from R2.';
 
     localStorage.setItem(
       LAST_SYNC_VERSION_KEY,

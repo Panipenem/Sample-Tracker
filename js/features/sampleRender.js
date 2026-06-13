@@ -6,12 +6,41 @@ import { escapeHtml } from '../utils/string.js';
 import { setActiveTab } from './tabs.js';
 
 const PAGE_SIZE = 100;
+const SAMPLE_COLUMN_STORAGE_KEY = 'LIMS_SAMPLE_VISIBLE_COLUMNS';
+const SAMPLE_COLUMNS = [
+  { key: 'sample_id', label: 'Sample ID', locked: true },
+  { key: 'date', label: 'Date', locked: true },
+  { key: 'experiment_label', label: 'Exp label' },
+  { key: 'species_genotype', label: 'Species / Genotype' },
+  { key: 'model', label: 'Model' },
+  { key: 'tissue', label: 'Tissue', locked: true },
+  { key: 'sample_type', label: 'Type', locked: true },
+  { key: 'processing', label: 'Processing' },
+  { key: 'notes', label: 'Notes' },
+  { key: 'project', label: 'Project', locked: true },
+  { key: 'status', label: 'Status', locked: true },
+  { key: 'storage', label: 'Storage', locked: true },
+];
+const DEFAULT_VISIBLE_SAMPLE_COLUMNS = [
+  'sample_id',
+  'date',
+  'tissue',
+  'sample_type',
+  'project',
+  'status',
+  'storage',
+];
+const LOCKED_SAMPLE_COLUMNS = SAMPLE_COLUMNS
+  .filter(column => column.locked)
+  .map(column => column.key);
 
 const tableState = {
   samplesPage: 1,
   archivedPage: 1,
   deletedPage: 1,
 };
+
+let rowActionCloseBound = false;
 
 export function isArchivedStatus(status) {
   if (!status) return false;
@@ -35,6 +64,25 @@ export function resetArchivedPagination() {
 
 export function resetDeletedPagination() {
   tableState.deletedPage = 1;
+}
+
+export function bindSampleColumnEvents() {
+  renderSampleColumnMenu();
+
+  const toggle = document.getElementById('btn-toggle-columns');
+  const menu = document.getElementById('sample-column-menu');
+  if (!toggle || !menu) return;
+
+  toggle.addEventListener('click', event => {
+    event.stopPropagation();
+    menu.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', event => {
+    if (menu.classList.contains('hidden')) return;
+    if (menu.contains(event.target) || event.target === toggle) return;
+    menu.classList.add('hidden');
+  });
 }
 
 function buildSearchWhere(search, fields) {
@@ -194,37 +242,42 @@ export function renderSamples({
     const id = Number(row.id) || 0;
 
     tr.innerHTML = `
-      <td><input type="checkbox" class="sample-select" data-id="${id}"></td>
-      <td>${escapeHtml(row.sample_id)}</td>
-      <td>${escapeHtml(row.date)}</td>
-      <td>${escapeHtml(row.experiment_label)}</td>
-      <td>${escapeHtml(row.species_genotype)}</td>
-      <td>${escapeHtml(row.model)}</td>
-      <td>${escapeHtml(row.tissue)}</td>
-      <td>${escapeHtml(row.sample_type)}</td>
-      <td>${escapeHtml(row.processing)}</td>
-      <td>${escapeHtml(row.notes)}</td>
-      <td>${escapeHtml(row.project)}</td>
-      <td>${statusHtml}</td>
-      <td>${escapeHtml(storageStr)}</td>
-      <td>
+      <td data-column="select"><input type="checkbox" class="sample-select" data-id="${id}"></td>
+      <td data-column="sample_id">${escapeHtml(row.sample_id)}</td>
+      <td data-column="date">${escapeHtml(row.date)}</td>
+      <td data-column="experiment_label">${escapeHtml(row.experiment_label)}</td>
+      <td data-column="species_genotype">${escapeHtml(row.species_genotype)}</td>
+      <td data-column="model">${escapeHtml(row.model)}</td>
+      <td data-column="tissue">${escapeHtml(row.tissue)}</td>
+      <td data-column="sample_type">${escapeHtml(row.sample_type)}</td>
+      <td data-column="processing">${escapeHtml(row.processing)}</td>
+      <td data-column="notes">${escapeHtml(row.notes)}</td>
+      <td data-column="project">${escapeHtml(row.project)}</td>
+      <td data-column="status">${statusHtml}</td>
+      <td data-column="storage">${escapeHtml(storageStr)}</td>
+      <td data-column="actions">
         <div class="row-actions">
           <button data-id="${id}" class="btn-details">Details</button>
           <button data-id="${id}" class="btn-edit">Edit</button>
-          <button
-            data-id="${id}"
-            data-sample-id="${escapeHtml(row.sample_id)}"
-            class="btn-archive"
-          >
-            Archive
-          </button>
-          <button
-            data-id="${id}"
-            data-sample-id="${escapeHtml(row.sample_id)}"
-            class="btn-delete"
-          >
-            Soft delete
-          </button>
+          <div class="more-actions">
+            <button type="button" class="btn-more-actions">More</button>
+            <div class="row-action-menu hidden">
+              <button
+                data-id="${id}"
+                data-sample-id="${escapeHtml(row.sample_id)}"
+                class="btn-archive"
+              >
+                Archive
+              </button>
+              <button
+                data-id="${id}"
+                data-sample-id="${escapeHtml(row.sample_id)}"
+                class="btn-delete danger-menu-action"
+              >
+                Soft delete
+              </button>
+            </div>
+          </div>
         </div>
       </td>
     `;
@@ -237,6 +290,8 @@ export function renderSamples({
     refreshAllViews,
     loadSampleToForm,
   });
+  bindMoreActionMenus();
+  applySampleColumnVisibility();
 
   const selectAll = document.getElementById('select-all-samples');
   if (selectAll) {
@@ -257,6 +312,100 @@ export function renderSamples({
       tableState.samplesPage = Math.min(totalPages, tableState.samplesPage + 1);
       renderSamples({ makeDbDirty, refreshAllViews, loadSampleToForm });
     },
+  });
+}
+
+function getVisibleSampleColumns() {
+  const locked = LOCKED_SAMPLE_COLUMNS.concat(['select', 'actions']);
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAMPLE_COLUMN_STORAGE_KEY) || '[]');
+    if (Array.isArray(saved) && saved.length > 0) {
+      return new Set(saved.concat(locked));
+    }
+  } catch (_) {
+    // Ignore invalid saved preferences.
+  }
+
+  return new Set(DEFAULT_VISIBLE_SAMPLE_COLUMNS.concat(locked));
+}
+
+function setVisibleSampleColumns(visible) {
+  localStorage.setItem(
+    SAMPLE_COLUMN_STORAGE_KEY,
+    JSON.stringify(Array.from(visible))
+  );
+}
+
+function renderSampleColumnMenu() {
+  const menu = document.getElementById('sample-column-menu');
+  if (!menu) return;
+
+  const visible = getVisibleSampleColumns();
+  menu.innerHTML = SAMPLE_COLUMNS.map(column => `
+    <label>
+      <input
+        type="checkbox"
+        value="${column.key}"
+        ${visible.has(column.key) ? 'checked' : ''}
+        ${column.locked ? 'disabled' : ''}
+      >
+      ${escapeHtml(column.label)}
+    </label>
+  `).join('');
+
+  menu.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', () => {
+      const nextVisible = getVisibleSampleColumns();
+
+      if (input.checked) {
+        nextVisible.add(input.value);
+      } else {
+        nextVisible.delete(input.value);
+      }
+
+      setVisibleSampleColumns(nextVisible);
+      applySampleColumnVisibility();
+    });
+  });
+}
+
+function applySampleColumnVisibility() {
+  const table = document.getElementById('samples-table');
+  if (!table) return;
+
+  const visible = getVisibleSampleColumns();
+  visible.add('select');
+  visible.add('actions');
+
+  table.querySelectorAll('[data-column]').forEach(cell => {
+    const key = cell.getAttribute('data-column');
+    cell.classList.toggle('column-hidden', !visible.has(key));
+  });
+}
+
+function bindMoreActionMenus() {
+  document.querySelectorAll('.btn-more-actions').forEach(btn => {
+    btn.addEventListener('click', event => {
+      event.stopPropagation();
+      const menu = btn.closest('.more-actions')?.querySelector('.row-action-menu');
+      if (!menu) return;
+
+      document.querySelectorAll('.row-action-menu').forEach(other => {
+        if (other !== menu) other.classList.add('hidden');
+      });
+      menu.classList.toggle('hidden');
+    });
+  });
+
+  if (rowActionCloseBound) return;
+  rowActionCloseBound = true;
+
+  document.addEventListener('click', event => {
+    if (event.target.closest('.more-actions')) return;
+    document.querySelectorAll('.row-action-menu').forEach(menu => {
+      menu.classList.add('hidden');
+    });
   });
 }
 
