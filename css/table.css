@@ -11,6 +11,20 @@
   margin-top: 8px;
 }
 
+#samples-table {
+  min-width: 1320px;
+}
+
+#archived-table,
+#deleted-table {
+  min-width: 1180px;
+}
+
+#audit-table,
+#quality-table {
+  min-width: 760px;
+}
+
 #samples-table th,
 #samples-table td,
 #archived-table th,
@@ -88,23 +102,36 @@
 }
 
 #samples-table th:last-child,
-#samples-table td:last-child,
+#samples-table td:last-child {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+}
+
 #archived-table th:last-child,
 #archived-table td:last-child,
 #deleted-table th:last-child,
 #deleted-table td:last-child {
-  white-space: nowrap;
   width: 160px;
+  min-width: 160px;
   max-width: 160px;
 }
 
-#samples-table td:last-child button,
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.row-actions button,
 #archived-table td:last-child button,
 #deleted-table td:last-child button {
   padding: 3px 6px;
   font-size: 11px;
-  margin: 0 2px;
+  margin: 0;
   display: inline-block;
+  white-space: nowrap;
 }
 
 #samples-table td button,

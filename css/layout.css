@@ -28,6 +28,7 @@ main {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 8px;
@@ -113,4 +114,37 @@ main {
 
 .toolbar-actions {
   padding-top: 6px;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.settings-tab-button {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  background: #f9fafb;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+}
+
+.settings-tab-button.active {
+  background: white;
+  border-bottom: 1px solid white;
+  font-weight: 600;
+}
+
+.settings-panel.hidden {
+  display: none;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
 }

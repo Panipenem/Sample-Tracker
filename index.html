@@ -56,10 +56,8 @@
     <button class="tab-button active" data-tab="form">Data Entry</button>
     <button class="tab-button" data-tab="samples">Sample List</button>
     <button class="tab-button" data-tab="archived">Archived</button>
-    <button class="tab-button" data-tab="deleted">Deleted</button>
-    <button class="tab-button" data-tab="audit">Audit Log</button>
     <button class="tab-button" data-tab="quality">Data Quality</button>
-    <button class="tab-button" data-tab="boxes">Box View</button>
+    <button class="tab-button" data-tab="settings">Settings</button>
   </div>
 
   <!-- Sample form -->
@@ -246,6 +244,7 @@
     </div>
     </div>
     
+    <div class="table-wrap">
     <table id="samples-table">
       <thead>
       <tr>
@@ -267,6 +266,7 @@
       </thead>
       <tbody></tbody>
     </table>
+    </div>
   </div>
 
     <!-- Archived samples -->
@@ -290,6 +290,7 @@
         </div>
       </div>
     </div>
+    <div class="table-wrap">
     <table id="archived-table">
       <thead>
       <tr>
@@ -310,78 +311,7 @@
       </thead>
       <tbody></tbody>
     </table>
-  </div>
-
-  <!-- Deleted samples -->
-  <div class="section" id="section-deleted">
-    <h2>Deleted samples</h2>
-    <div class="sticky-toolbar">
-      <div class="flex">
-        <label>Search (Sample ID / tissue / model / project)
-          <input type="text" id="deleted-search-input" placeholder="Type to filter deleted samples...">
-        </label>
-      </div>
-      <div class="flex" style="margin-top:6px;">
-        <div>
-          <button type="button" id="deleted-prev-page" style="display:none;">Prev</button>
-          <span id="deleted-page-info" class="small">Showing 0-0 / 0 · 100 per page</span>
-          <button type="button" id="deleted-next-page" style="display:none;">Next</button>
-        </div>
-        <div style="margin-left:auto;">
-          <button id="btn-restore-deleted">Restore selected</button>
-          <button id="btn-purge-deleted" style="background:#4b0000;color:#fff;">Purge selected</button>
-        </div>
-      </div>
     </div>
-    <table id="deleted-table">
-      <thead>
-      <tr>
-        <th><input type="checkbox" id="select-all-deleted"></th>
-        <th>Sample ID</th>
-        <th>Date</th>
-        <th>Exp label</th>
-        <th>Species / Genotype</th>
-        <th>Model</th>
-        <th>Tissue</th>
-        <th>Type</th>
-        <th>Processing</th>
-        <th>notes</th>
-        <th>Project</th>
-        <th>Status</th>
-        <th>Storage</th>
-      </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <!-- Audit log -->
-  <div class="section" id="section-audit">
-    <h2>Audit Log</h2>
-    <div class="sticky-toolbar">
-      <div class="flex">
-        <label>Search Sample ID / details
-          <input type="text" id="audit-search-input" placeholder="Type to filter audit log...">
-        </label>
-        <label>Action
-          <select id="audit-action-filter">
-            <option value="">(all)</option>
-          </select>
-        </label>
-      </div>
-      <div class="small">Shows the latest 200 matching sample events recorded in this SQLite database.</div>
-    </div>
-    <table id="audit-table">
-      <thead>
-      <tr>
-        <th>Time</th>
-        <th>Action</th>
-        <th>Sample ID</th>
-        <th>Details</th>
-      </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
   </div>
 
   <!-- Data quality -->
@@ -389,6 +319,7 @@
     <h2>Data Quality</h2>
     <div id="data-quality-summary" class="quality-grid"></div>
     <h3>Records to review</h3>
+    <div class="table-wrap">
     <table id="quality-table">
       <thead>
       <tr>
@@ -401,13 +332,100 @@
       </thead>
       <tbody></tbody>
     </table>
+    </div>
   </div>
 
-  <!-- Box view -->
-  <div class="section" id="section-boxes">
-    <h2>Box View</h2>
-    <div class="small">Capacity is optional. Set it per box to show occupancy such as 32 / 81 tubes.</div>
-    <div id="boxes-container"></div>
+  <!-- Settings -->
+  <div class="section" id="section-settings">
+    <h2>Settings</h2>
+    <div class="settings-tabs">
+      <button type="button" class="settings-tab-button active" data-settings-tab="deleted">Deleted samples</button>
+      <button type="button" class="settings-tab-button" data-settings-tab="audit">Audit Log</button>
+      <button type="button" class="settings-tab-button" data-settings-tab="boxes">Box capacity</button>
+    </div>
+
+    <!-- Deleted samples -->
+    <div class="settings-panel" id="settings-panel-deleted">
+      <h3>Deleted samples</h3>
+      <div class="sticky-toolbar">
+        <div class="flex">
+          <label>Search (Sample ID / tissue / model / project)
+            <input type="text" id="deleted-search-input" placeholder="Type to filter deleted samples...">
+          </label>
+        </div>
+        <div class="flex" style="margin-top:6px;">
+          <div>
+            <button type="button" id="deleted-prev-page" style="display:none;">Prev</button>
+            <span id="deleted-page-info" class="small">Showing 0-0 / 0 · 100 per page</span>
+            <button type="button" id="deleted-next-page" style="display:none;">Next</button>
+          </div>
+          <div style="margin-left:auto;">
+            <button id="btn-restore-deleted">Restore selected</button>
+            <button id="btn-purge-deleted" style="background:#4b0000;color:#fff;">Purge selected</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+      <table id="deleted-table">
+        <thead>
+        <tr>
+          <th><input type="checkbox" id="select-all-deleted"></th>
+          <th>Sample ID</th>
+          <th>Date</th>
+          <th>Exp label</th>
+          <th>Species / Genotype</th>
+          <th>Model</th>
+          <th>Tissue</th>
+          <th>Type</th>
+          <th>Processing</th>
+          <th>notes</th>
+          <th>Project</th>
+          <th>Status</th>
+          <th>Storage</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- Audit log -->
+    <div class="settings-panel hidden" id="settings-panel-audit">
+      <h3>Audit Log</h3>
+      <div class="sticky-toolbar">
+        <div class="flex">
+          <label>Search Sample ID / details
+            <input type="text" id="audit-search-input" placeholder="Type to filter audit log...">
+          </label>
+          <label>Action
+            <select id="audit-action-filter">
+              <option value="">(all)</option>
+            </select>
+          </label>
+        </div>
+        <div class="small">Shows the latest 200 matching sample events recorded in this SQLite database.</div>
+      </div>
+      <div class="table-wrap">
+      <table id="audit-table">
+        <thead>
+        <tr>
+          <th>Time</th>
+          <th>Action</th>
+          <th>Sample ID</th>
+          <th>Details</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- Box view -->
+    <div class="settings-panel hidden" id="settings-panel-boxes">
+      <h3>Box capacity</h3>
+      <div class="small">Capacity is optional. Set it per box to show occupancy such as 32 / 81 tubes.</div>
+      <div id="boxes-container"></div>
+    </div>
   </div>
 
   <!-- Secondary Sample Wizard Modal -->
