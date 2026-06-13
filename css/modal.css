@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(15, 23, 42, 0.38);
   z-index: 1000;
 }
 
@@ -13,9 +13,10 @@
 }
 
 .wizard-modal {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
   max-width: 650px;
   width: 95%;
   max-height: 80vh;
@@ -36,12 +37,13 @@
 
 .wizard-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .wizard-close-btn {
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
+  color: var(--muted);
   font-size: 18px;
   line-height: 1;
   padding: 0 4px;
@@ -76,7 +78,7 @@
   justify-content: flex-end;
   gap: 6px;
   margin-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
   padding-top: 8px;
 }
 
@@ -89,7 +91,7 @@
 }
 
 .wizard-type-block {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 8px;
   margin-bottom: 8px;

@@ -120,6 +120,9 @@ function renderBoxContainer({ container, editableCapacity }) {
       const infoDiv = document.createElement('div');
       const rackText = box.rack ? `Rack: ${box.rack}` : '';
       const capacityText = `${box.sample_count} / ${capacity} tubes`;
+      const occupancyPercent = capacity > 0
+        ? Math.min(100, Math.round((Number(box.sample_count) / capacity) * 100))
+        : 0;
       infoDiv.innerHTML = `
         <div><strong>${escapeHtml(box.box_label)}</strong></div>
         <div class="small">${escapeHtml(rackText)}${rackText ? ' · ' : ''}${escapeHtml(capacityText)}</div>
@@ -130,12 +133,27 @@ function renderBoxContainer({ container, editableCapacity }) {
       if (box.sample_count > 0) {
         toggleBtn = document.createElement('button');
         toggleBtn.type = 'button';
-        toggleBtn.className = 'sample-toggle small';
+        toggleBtn.className = 'sample-toggle small btn-ghost';
         toggleBtn.textContent = `Show samples (${box.sample_count})`;
         cardHeader.appendChild(toggleBtn);
       }
 
       card.appendChild(cardHeader);
+
+      const occupancyFillClass = Number(box.sample_count) > capacity
+        ? 'box-occupancy-danger'
+        : occupancyPercent >= 80
+          ? 'box-occupancy-warning'
+          : '';
+      const occupancyBar = document.createElement('div');
+      occupancyBar.className = 'box-occupancy-bar';
+      occupancyBar.innerHTML = `
+        <span
+          class="box-occupancy-fill ${occupancyFillClass}"
+          style="--occupancy-width:${occupancyPercent}%"
+        ></span>
+      `;
+      card.appendChild(occupancyBar);
 
       if (editableCapacity) {
         const capacityEditor = document.createElement('div');
@@ -150,7 +168,7 @@ function renderBoxContainer({ container, editableCapacity }) {
             value="${capacity}"
             data-box-capacity-id="${box.id}"
           >
-          <button type="button" class="btn-save-box-capacity" data-box-id="${box.id}">Save</button>
+          <button type="button" class="btn-save-box-capacity btn-primary" data-box-id="${box.id}">Save</button>
         `;
         card.appendChild(capacityEditor);
       }

@@ -8,7 +8,8 @@
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 12px;
-  margin-top: 8px;
+  margin-top: 10px;
+  background: var(--surface);
 }
 
 #samples-table {
@@ -37,8 +38,8 @@
 #quality-table td,
 #sample-detail-history-table th,
 #sample-detail-history-table td {
-  border: 1px solid #d1d5db;
-  padding: 6px 8px;
+  border: 1px solid var(--border);
+  padding: 8px 10px;
   text-align: left;
   word-wrap: break-word;
 }
@@ -49,8 +50,9 @@
 #audit-table th,
 #quality-table th,
 #sample-detail-history-table th {
-  background-color: #f3f4f6;
-  font-weight: 600;
+  background-color: var(--surface-soft);
+  color: #374151;
+  font-weight: 700;
 }
 
 #samples-table th:first-child,
@@ -142,9 +144,9 @@
   gap: 4px;
   min-width: 110px;
   padding: 6px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
 }
 
@@ -184,7 +186,7 @@
 #audit-table tbody tr:nth-child(odd),
 #quality-table tbody tr:nth-child(odd),
 #sample-detail-history-table tbody tr:nth-child(odd) {
-  background-color: #f9fafb;
+  background-color: var(--surface-soft);
 }
 
 #samples-table tbody tr:nth-child(even),
@@ -193,7 +195,7 @@
 #audit-table tbody tr:nth-child(even),
 #quality-table tbody tr:nth-child(even),
 #sample-detail-history-table tbody tr:nth-child(even) {
-  background-color: #ffffff;
+  background-color: var(--surface);
 }
 
 #samples-table tbody tr:hover,
@@ -202,7 +204,7 @@
 #audit-table tbody tr:hover,
 #quality-table tbody tr:hover,
 #sample-detail-history-table tbody tr:hover {
-  background-color: #e5f0ff;
+  background-color: #eff6ff;
 }
 
 #audit-table th:nth-child(1),

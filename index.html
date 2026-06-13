@@ -6,11 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   
-  <link rel="stylesheet" href="./css/base.css">
-  <link rel="stylesheet" href="./css/layout.css">
-  <link rel="stylesheet" href="./css/table.css">
-  <link rel="stylesheet" href="./css/modal.css">
-  <link rel="stylesheet" href="./css/components.css">
+  <link rel="stylesheet" href="./css/base.css?v=clean-lab-ui">
+  <link rel="stylesheet" href="./css/layout.css?v=clean-lab-ui">
+  <link rel="stylesheet" href="./css/table.css?v=clean-lab-ui">
+  <link rel="stylesheet" href="./css/modal.css?v=clean-lab-ui">
+  <link rel="stylesheet" href="./css/components.css?v=clean-lab-ui">
 
 
 </head>
@@ -27,7 +27,7 @@
 
     <!-- Row 1: local DB operations -->
     <div class="db-row">
-      <button id="btn-new-db">New in-memory DB</button>
+      <button id="btn-new-db" class="btn-secondary">New in-memory DB</button>
 
       <label class="db-file-label">
         Load .sqlite file:
@@ -37,11 +37,11 @@
 
     <!-- Row 2: remote sync + backup -->
     <div class="db-row">
-      <button id="btn-load-r2">Load ← R2</button>
-      <button id="btn-save-r2">Sync → R2</button>
-      <button id="btn-check-r2">Check R2 status</button>
-      <button id="btn-export-db">Save Master DB (.sqlite)</button>
-      <button id="btn-backup-db">Backup DB</button>
+      <button id="btn-load-r2" class="btn-secondary">Load ← R2</button>
+      <button id="btn-save-r2" class="btn-primary">Sync → R2</button>
+      <button id="btn-check-r2" class="btn-secondary">Check R2 status</button>
+      <button id="btn-export-db" class="btn-secondary">Save Master DB (.sqlite)</button>
+      <button id="btn-backup-db" class="btn-secondary">Backup DB</button>
     </div>
 
     <!-- Status line -->
@@ -72,7 +72,7 @@
         <input type="file" id="import-file" accept=".xlsx" style="margin:0;">
       </label>
 
-      <button id="btn-import-samples">Import samples</button>
+      <button id="btn-import-samples" class="btn-primary">Import samples</button>
     </div> 
     
     <h2>Add / Edit Sample</h2>
@@ -82,7 +82,7 @@
             <label>Sample ID</label>
             <div class="flex">
                 <input type="text" id="sample_id" required="" style="flex:1; min-width:140px;" placeholder="Manual，or Auto Generated">
-            <button type="button" id="btn-generate-id">Auto</button>
+            <button type="button" id="btn-generate-id" class="btn-secondary">Auto</button>
             </div>
         </div>
         <div style="flex:1; min-width:140px;">
@@ -171,7 +171,7 @@
               Add new freezer
               <input type="text" id="freezer_no_new" placeholder="e.g. F1 / downstairs / LN2-1">
             </label>
-            <button type="button" id="btn-add-freezer" style="margin-top:6px;">Add</button>
+            <button type="button" id="btn-add-freezer" class="btn-secondary" style="margin-top:6px;">Add</button>
           </div>
         </div>
         <div style="flex:1; min-width:120px;">
@@ -200,8 +200,8 @@
 
       <input type="hidden" id="internal_sample_row_id">
 
-      <button type="submit">Save Sample</button>
-      <button type="button" id="btn-reset-form">Reset</button>
+      <button type="submit" class="btn-primary">Save Sample</button>
+      <button type="button" id="btn-reset-form" class="btn-secondary">Reset</button>
     </form>
     <div class="small" style="margin-top:6px;">
       Tip: Use suffix in Sample ID (e.g. -A, -B, -C) to represent aliquots as separate records.
@@ -229,18 +229,18 @@
     </div>
     <div class="flex" style="margin-top:6px;">
       <div>
-        <button id="btn-export-xlsx">Export all (.xlsx)</button>
-        <button id="btn-export-labels-xlsx">Export labels (.xlsx)</button>
-        <button id="btn-open-secondary-wizard">Secondary wizard</button>
-        <button id="btn-batch-edit">Batch edit selected</button>
+        <button id="btn-export-xlsx" class="btn-secondary">Export all (.xlsx)</button>
+        <button id="btn-export-labels-xlsx" class="btn-secondary">Export labels (.xlsx)</button>
+        <button id="btn-open-secondary-wizard" class="btn-secondary">Secondary wizard</button>
+        <button id="btn-batch-edit" class="btn-secondary">Batch edit selected</button>
       </div>
       <div class="toolbar-right-actions">
         <div class="column-controls">
-          <button type="button" id="btn-toggle-columns">Columns</button>
+          <button type="button" id="btn-toggle-columns" class="btn-secondary">Columns</button>
           <div id="sample-column-menu" class="column-menu hidden"></div>
         </div>
-        <button id="btn-archive-selected">Archive selected</button>
-        <button id="btn-delete-selected" style="background:#b40000;color:#fff;">Soft delete selected</button>
+        <button id="btn-archive-selected" class="btn-secondary">Archive selected</button>
+        <button id="btn-delete-selected" class="btn-danger">Soft delete selected</button>
       </div>
     </div>
     <div class="pager-row">
@@ -299,8 +299,8 @@
           <button type="button" id="archived-next-page" style="display:none;">Next</button>
         </div>
         <div style="margin-left:auto;">
-          <button id="btn-unarchive-selected">Unarchive selected</button>
-          <button id="btn-delete-archived" style="background:#b40000;color:#fff;">Soft delete selected</button>
+          <button id="btn-unarchive-selected" class="btn-secondary">Unarchive selected</button>
+          <button id="btn-delete-archived" class="btn-danger">Soft delete selected</button>
         </div>
       </div>
     </div>
@@ -385,8 +385,8 @@
             <button type="button" id="deleted-next-page" style="display:none;">Next</button>
           </div>
           <div style="margin-left:auto;">
-            <button id="btn-restore-deleted">Restore selected</button>
-            <button id="btn-purge-deleted" style="background:#4b0000;color:#fff;">Purge selected</button>
+            <button id="btn-restore-deleted" class="btn-secondary">Restore selected</button>
+            <button id="btn-purge-deleted" class="btn-danger">Purge selected</button>
           </div>
         </div>
       </div>
@@ -477,8 +477,8 @@
         </div>
 
         <div class="wizard-footer">
-          <button type="button" id="wizard-cancel-1">Cancel</button>
-          <button type="button" id="wizard-next-1">Next</button>
+          <button type="button" id="wizard-cancel-1" class="btn-secondary">Cancel</button>
+          <button type="button" id="wizard-next-1" class="btn-primary">Next</button>
         </div>
       </div>
 
@@ -489,8 +489,8 @@
           <!-- filled by JS -->
         </div>
         <div class="wizard-footer">
-          <button type="button" id="wizard-prev-2">Back</button>
-          <button type="button" id="wizard-next-2">Next</button>
+          <button type="button" id="wizard-prev-2" class="btn-secondary">Back</button>
+          <button type="button" id="wizard-next-2" class="btn-primary">Next</button>
         </div>
       </div>
 
@@ -514,8 +514,8 @@
           </div>
         </div>
         <div class="wizard-footer">
-          <button type="button" id="wizard-prev-3">Back</button>
-          <button type="button" id="wizard-next-3">Next</button>
+          <button type="button" id="wizard-prev-3" class="btn-secondary">Back</button>
+          <button type="button" id="wizard-next-3" class="btn-primary">Next</button>
         </div>
       </div>
 
@@ -527,8 +527,8 @@
           <!-- filled by JS -->
         </div>
         <div class="wizard-footer">
-          <button type="button" id="wizard-prev-4">Back</button>
-          <button type="button" id="wizard-generate">Generate samples</button>
+          <button type="button" id="wizard-prev-4" class="btn-secondary">Back</button>
+          <button type="button" id="wizard-generate" class="btn-primary">Generate samples</button>
         </div>
       </div>
 
@@ -587,7 +587,7 @@
                   Add new freezer (will be saved to the list)
                   <input type="text" id="batch-freezer-no-new" placeholder="e.g. F1 / downstairs / LN2-1">
                 </label>
-                <button type="button" id="btn-batch-add-freezer" style="margin-top:6px;">Add</button>
+                <button type="button" id="btn-batch-add-freezer" class="btn-secondary" style="margin-top:6px;">Add</button>
               </div>
             </label>
           </div>
@@ -619,7 +619,7 @@
 
         <!-- 高危字段开关 -->
         <div style="margin-top:10px;">
-        <button type="button" id="batch-adv-toggle" style="font-size:12px; padding:2px 6px;">
+        <button type="button" id="batch-adv-toggle" class="btn-secondary" style="font-size:12px; padding:2px 6px;">
             ⚠️ Important information (click to edit only if necessary)
         </button>
         </div>
@@ -658,8 +658,8 @@
         </div>
 
         <div class="wizard-footer">
-          <button type="button" id="batch-edit-cancel">Cancel</button>
-          <button type="button" id="batch-edit-apply">Apply to selected</button>
+          <button type="button" id="batch-edit-cancel" class="btn-secondary">Cancel</button>
+          <button type="button" id="batch-edit-apply" class="btn-primary">Apply to selected</button>
         </div>
       </div>
     </div>
@@ -679,6 +679,6 @@
 
 <script src="sql-wasm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="./js/main.js"></script>
+<script type="module" src="./js/main.js?v=clean-lab-ui"></script>
 
 </body></html>

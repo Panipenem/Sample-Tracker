@@ -59,51 +59,66 @@ function openSampleDetail(id) {
   if (!body || !backdrop) return;
 
   if (title) {
-    title.textContent = `Sample details: ${sample.sample_id || id}`;
+    title.innerHTML = `
+      <span>Sample details</span>
+      <span class="detail-title-id">${escapeHtml(sample.sample_id || id)}</span>
+      ${statusTag(sample.status)}
+    `;
   }
 
   body.innerHTML = `
-    <div class="detail-grid">
-      ${detailItem('Date', sample.date)}
-      ${detailItem('Status', sample.status)}
-      ${detailItem('Project', sample.project)}
-      ${detailItem('Species / Genotype', sample.species_genotype)}
-      ${detailItem('Model', sample.model)}
-      ${detailItem('Tissue', sample.tissue)}
-      ${detailItem('Type', sample.sample_type)}
-      ${detailItem('Processing', sample.processing)}
-      ${detailItem('Parent Sample ID', sample.parent_sample_id)}
-      ${detailItem('Child Sample IDs', formatChildSamples(children))}
-      ${detailItem('Amount', sample.amount)}
-      ${detailItem('Storage', [
-        sample.storage_temperature,
-        sample.freezer_no,
-        sample.rack,
-        sample.box_label,
-      ].filter(Boolean).join(' / '))}
-      ${detailItem('Deleted at', sample.deleted_at)}
+    <div class="detail-layout">
+      ${detailSection('Overview', [
+        detailItem('Date', sample.date),
+        detailItem('Project', sample.project),
+        detailItem('Species / Genotype', sample.species_genotype),
+        detailItem('Model', sample.model),
+        detailItem('Tissue', sample.tissue),
+        detailItem('Type', sample.sample_type),
+        detailItem('Processing', sample.processing),
+        detailItem('Amount', sample.amount),
+      ].join(''))}
+
+      ${detailSection('Storage', [
+        detailItem('Temperature', sample.storage_temperature),
+        detailItem('Freezer', sample.freezer_no),
+        detailItem('Rack', sample.rack),
+        detailItem('Box', sample.box_label),
+      ].join(''))}
+
+      ${detailSection('Lineage', [
+        detailItem('Parent Sample ID', sample.parent_sample_id),
+        detailItem('Child Sample IDs', childSampleChips(children), { html: true }),
+        detailItem('Deleted at', sample.deleted_at),
+      ].join(''))}
+
+      <section class="detail-panel detail-notes-panel">
+        <h3>Notes</h3>
+        <div class="detail-notes">${escapeHtml(sample.notes || '(none)')}</div>
+      </section>
+
+      <section class="detail-panel detail-history-panel">
+        <h3>History</h3>
+        <table id="sample-detail-history-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Action</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${events.map(event => `
+              <tr>
+                <td>${escapeHtml(event.created_at)}</td>
+                <td>${escapeHtml(event.action)}</td>
+                <td>${escapeHtml(formatDetails(event.details_json))}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </section>
     </div>
-    <h3>Notes</h3>
-    <div class="small">${escapeHtml(sample.notes || '(none)')}</div>
-    <h3>History</h3>
-    <table id="sample-detail-history-table">
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>Action</th>
-          <th>Details</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${events.map(event => `
-          <tr>
-            <td>${escapeHtml(event.created_at)}</td>
-            <td>${escapeHtml(event.action)}</td>
-            <td>${escapeHtml(formatDetails(event.details_json))}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
   `;
 
   backdrop.classList.remove('hidden');
@@ -114,24 +129,52 @@ function closeSampleDetail() {
   if (backdrop) backdrop.classList.add('hidden');
 }
 
-function detailItem(label, value) {
+function detailItem(label, value, { html = false } = {}) {
+  const displayValue = html ? (value || '') : escapeHtml(value || '');
+
   return `
     <div class="detail-item">
       <span class="small">${escapeHtml(label)}</span>
-      <strong>${escapeHtml(value || '')}</strong>
+      <strong>${displayValue}</strong>
     </div>
   `;
 }
 
-function formatChildSamples(children) {
+function detailSection(title, content) {
+  return `
+    <section class="detail-panel">
+      <h3>${escapeHtml(title)}</h3>
+      <div class="detail-grid">${content}</div>
+    </section>
+  `;
+}
+
+function childSampleChips(children) {
   if (!children || children.length === 0) return '';
 
   return children
-    .map(child => child.status
-      ? `${child.sample_id} (${child.status})`
-      : child.sample_id
-    )
-    .join(', ');
+    .map(child => `
+      <span class="detail-chip">
+        ${escapeHtml(child.sample_id)}
+        ${child.status ? `<span>${escapeHtml(child.status)}</span>` : ''}
+      </span>
+    `)
+    .join('');
+}
+
+function statusTag(status) {
+  if (!status) return '';
+
+  const normalized = String(status).toLowerCase();
+  let cls = 'tag detail-status-tag';
+
+  if (normalized.startsWith('available')) {
+    cls += ' tag-available';
+  } else if (normalized.startsWith('low')) {
+    cls += ' tag-low';
+  }
+
+  return `<span class="${cls}">${escapeHtml(status)}</span>`;
 }
 
 function formatDetails(detailsJson) {

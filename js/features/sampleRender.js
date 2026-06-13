@@ -256,6 +256,10 @@ export function renderSamples({
         cls += ' tag-available';
       } else if (s.startsWith('low')) {
         cls += ' tag-low';
+      } else if (isArchivedStatus(s)) {
+        cls += ' tag-archived';
+      } else if (s === 'deleted') {
+        cls += ' tag-deleted';
       }
 
       statusHtml = `<span class="${cls}">${escapeHtml(row.status)}</span>`;
@@ -279,22 +283,22 @@ export function renderSamples({
       <td data-column="storage">${escapeHtml(storageStr)}</td>
       <td data-column="actions">
         <div class="row-actions">
-          <button data-id="${id}" class="btn-details">Details</button>
-          <button data-id="${id}" class="btn-edit">Edit</button>
+          <button data-id="${id}" class="btn-details btn-secondary">Details</button>
+          <button data-id="${id}" class="btn-edit btn-secondary">Edit</button>
           <div class="more-actions">
-            <button type="button" class="btn-more-actions">More</button>
+            <button type="button" class="btn-more-actions btn-secondary">More</button>
             <div class="row-action-menu hidden">
               <button
                 data-id="${id}"
                 data-sample-id="${escapeHtml(row.sample_id)}"
-                class="btn-archive"
+                class="btn-archive btn-secondary"
               >
                 Archive
               </button>
               <button
                 data-id="${id}"
                 data-sample-id="${escapeHtml(row.sample_id)}"
-                class="btn-delete danger-menu-action"
+                class="btn-delete danger-menu-action btn-danger"
               >
                 Soft delete
               </button>
@@ -617,6 +621,8 @@ export function renderArchivedSamples() {
         cls += ' tag-available';
       } else if (s.startsWith('low')) {
         cls += ' tag-low';
+      } else if (isArchivedStatus(s)) {
+        cls += ' tag-archived';
       }
 
       statusHtml = `<span class="${cls}">${escapeHtml(row.status)}</span>`;
@@ -719,7 +725,7 @@ export function renderDeletedSamples() {
     if (row.box_label) storageParts.push(row.box_label);
 
     const statusHtml = row.status
-      ? `<span class="tag">${escapeHtml(row.status)}</span>`
+      ? `<span class="tag tag-deleted">${escapeHtml(row.status)}</span>`
       : '';
     const id = Number(row.id) || 0;
 

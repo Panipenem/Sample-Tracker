@@ -1,18 +1,24 @@
 header {
-  background: #1f2937;
-  color: white;
-  padding: 12px 16px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
 }
 
 main {
-  padding: 16px;
+  width: min(1440px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 18px 0 28px;
 }
 
 .section {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .flex {
@@ -30,25 +36,27 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 8px;
-  margin-top: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+  margin-top: 12px;
 }
 
 .tab-button {
-  padding: 6px 10px;
+  padding: 7px 12px;
   font-size: 13px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-bottom: none;
-  background: #f9fafb;
+  background: var(--surface-soft);
   cursor: pointer;
   border-radius: 8px 8px 0 0;
+  color: #374151;
+  font-weight: 600;
 }
 
 .tab-button.active {
-  background: white;
-  border-bottom: 1px solid white;
-  font-weight: 600;
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface);
+  color: var(--primary);
 }
 
 .db-row {
@@ -79,8 +87,8 @@ main {
   padding: 8px 10px;
   margin-bottom: 16px;
   border-radius: 6px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
 }
 
 .import-row label {
@@ -107,9 +115,10 @@ main {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: #fff;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(6px);
 }
 
 .toolbar-actions {
@@ -121,23 +130,25 @@ main {
   flex-wrap: wrap;
   gap: 6px;
   margin: 8px 0 12px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .settings-tab-button {
-  padding: 6px 10px;
+  padding: 7px 12px;
   font-size: 13px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-bottom: none;
-  background: #f9fafb;
+  background: var(--surface-soft);
   cursor: pointer;
   border-radius: 8px 8px 0 0;
+  color: #374151;
+  font-weight: 600;
 }
 
 .settings-tab-button.active {
-  background: white;
-  border-bottom: 1px solid white;
-  font-weight: 600;
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface);
+  color: var(--primary);
 }
 
 .settings-panel.hidden {
@@ -175,9 +186,9 @@ main {
   gap: 6px 10px;
   min-width: 330px;
   padding: 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
 }
 
