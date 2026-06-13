@@ -49,6 +49,35 @@
   box-sizing: border-box;
 }
 
+.box-card-over-capacity {
+  border-color: #fca5a5;
+  background: #fff1f2;
+}
+
+.box-capacity-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.box-capacity-row input {
+  width: 88px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.box-capacity-row button {
+  margin-top: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.box-capacity-warning {
+  color: #b91c1c;
+  margin-top: 4px;
+}
+
 .box-sample-list {
   margin: 6px 0 0 0;
   padding-left: 16px;
@@ -84,4 +113,44 @@
   border: none;
   background: transparent;
   padding: 0;
+}
+
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.quality-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f9fafb;
+}
+
+.quality-card strong {
+  display: block;
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+.sample-detail-modal {
+  max-width: 820px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.detail-item {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+
+.detail-item .small {
+  display: block;
 }

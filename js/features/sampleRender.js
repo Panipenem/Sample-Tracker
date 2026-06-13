@@ -208,6 +208,7 @@ export function renderSamples({
       <td>${statusHtml}</td>
       <td>${escapeHtml(storageStr)}</td>
       <td>
+        <button data-id="${id}" class="btn-details">Details</button>
         <button data-id="${id}" class="btn-edit">Edit</button>
         <button
           data-id="${id}"

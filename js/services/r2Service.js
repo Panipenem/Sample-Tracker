@@ -6,6 +6,7 @@ import {
   MASTER_DB_FILENAME,
 } from '../config.js';
 import { uint8ToBase64, base64ToUint8 } from '../utils/encoding.js';
+import { downloadBlob } from '../utils/download.js';
 import { setMeta, getMeta } from '../db/meta.js';
 import { initSchema } from '../db/schema.js';
 import { updateLocalCacheFromCurrentDb } from './localCache.js';
@@ -43,15 +44,22 @@ function readMetaFromDatabase(db, key, defaultValue = null) {
   return defaultValue;
 }
 
-function readRemoteVersionFromBase64(dbBase64) {
-  if (!appState.SQL || !dbBase64) return 0;
+function readRemoteMetaFromBase64(dbBase64) {
+  if (!appState.SQL || !dbBase64) {
+    return { version: 0, updatedAt: '' };
+  }
 
   const u8 = base64ToUint8(dbBase64);
   const remoteDb = new appState.SQL.Database(u8);
 
   try {
     const version = parseInt(readMetaFromDatabase(remoteDb, 'version', '0'), 10);
-    return Number.isFinite(version) ? version : 0;
+    const updatedAt = readMetaFromDatabase(remoteDb, 'updated_at', '') || '';
+
+    return {
+      version: Number.isFinite(version) ? version : 0,
+      updatedAt,
+    };
   } finally {
     remoteDb.close();
   }
@@ -69,11 +77,32 @@ async function fetchRemoteSnapshot() {
 
   const data = await resp.json();
   if (!data || !data.dbBase64) return null;
+  const meta = readRemoteMetaFromBase64(data.dbBase64);
 
   return {
     dbBase64: data.dbBase64,
-    version: readRemoteVersionFromBase64(data.dbBase64),
+    version: meta.version,
+    updatedAt: meta.updatedAt,
   };
+}
+
+function makeTimestamp() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+
+  return (
+    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_` +
+    `${pad(now.getHours())}${pad(now.getMinutes())}`
+  );
+}
+
+function downloadPreSyncBackup() {
+  const binaryArray = appState.db.export();
+  const blob = new Blob([binaryArray], {
+    type: 'application/x-sqlite3',
+  });
+
+  downloadBlob(blob, `pre_sync_backup_${makeTimestamp()}.sqlite`);
 }
 
 function restoreLocalVersion(version, updateVersionBadge) {
@@ -122,6 +151,8 @@ export async function saveDbToR2({ updateVersionBadge } = {}) {
     alert('R2 write token is required to sync.');
     return;
   }
+
+  downloadPreSyncBackup();
 
   const previousVersion = appState.currentVersion || 0;
   appState.currentVersion = previousVersion + 1;
@@ -175,6 +206,58 @@ export async function saveDbToR2({ updateVersionBadge } = {}) {
     console.error('Error saving DB to R2:', err);
     alert('Error saving DB to R2, see console.');
     restoreLocalVersion(previousVersion, updateVersionBadge);
+  }
+}
+
+export async function checkR2Status({ updateVersionBadge } = {}) {
+  if (!R2_API_BASE) {
+    alert('R2_API_BASE 未配置');
+    return;
+  }
+
+  if (!appState.SQL) {
+    alert('sql.js not ready yet.');
+    return;
+  }
+
+  const statusEl = document.getElementById('db-status');
+  if (statusEl) {
+    statusEl.textContent = 'Checking R2 status...';
+  }
+
+  try {
+    const remoteSnapshot = await fetchRemoteSnapshot();
+    const localVersion = appState.currentVersion || 0;
+    const remoteVersion = remoteSnapshot?.version || 0;
+    const updatedAt = remoteSnapshot?.updatedAt || 'unknown time';
+
+    if (!remoteSnapshot) {
+      if (statusEl) {
+        statusEl.textContent = `R2 has no database yet. Local version: v${localVersion}.`;
+      }
+      return;
+    }
+
+    const relation = remoteVersion > localVersion
+      ? 'Remote is newer than local'
+      : remoteVersion < localVersion
+        ? 'Local is newer than remote'
+        : 'Local and remote versions match';
+
+    if (statusEl) {
+      statusEl.textContent =
+        `${relation}. Local v${localVersion}, remote v${remoteVersion}, remote updated ${updatedAt}.`;
+    }
+
+    if (typeof updateVersionBadge === 'function') {
+      updateVersionBadge();
+    }
+  } catch (err) {
+    console.error('R2 status check failed:', err);
+    if (statusEl) {
+      statusEl.textContent = 'R2 status check failed. See console for details.';
+    }
+    alert('R2 status check failed, see console.');
   }
 }
 

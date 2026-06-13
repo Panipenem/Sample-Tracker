@@ -2,7 +2,7 @@
 
 import { appState } from '../state.js';
 import { recordSampleEvent } from '../db/audit.js';
-import { queryAll, withTransaction } from '../db/query.js';
+import { queryAll, runSql, withTransaction } from '../db/query.js';
 
 export function bindSampleActionEvents({
   makeDbDirty,
@@ -13,6 +13,7 @@ export function bindSampleActionEvents({
   bindUnarchiveSelectedButton({ makeDbDirty, refreshAllViews });
   bindDeleteArchivedButton({ makeDbDirty, refreshAllViews });
   bindRestoreDeletedButton({ makeDbDirty, refreshAllViews });
+  bindPurgeDeletedButton({ makeDbDirty, refreshAllViews });
 }
 
 function bindArchiveSelectedButton({ makeDbDirty, refreshAllViews } = {}) {
@@ -259,6 +260,67 @@ function bindRestoreDeletedButton({ makeDbDirty, refreshAllViews } = {}) {
       } finally {
         stmt.free();
       }
+    });
+
+    if (typeof makeDbDirty === 'function') {
+      makeDbDirty();
+    }
+
+    if (typeof refreshAllViews === 'function') {
+      refreshAllViews();
+    }
+  });
+}
+
+function bindPurgeDeletedButton({ makeDbDirty, refreshAllViews } = {}) {
+  const btn = document.getElementById('btn-purge-deleted');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    if (!appState.db) return;
+
+    const checked = Array.from(document.querySelectorAll('.deleted-select:checked'));
+
+    if (checked.length === 0) {
+      alert('No deleted samples selected.');
+      return;
+    }
+
+    if (
+      !confirm(
+        `Permanently delete ${checked.length} selected deleted samples? This cannot be restored from the Deleted tab.`
+      )
+    ) {
+      return;
+    }
+
+    const typed = prompt('Type PURGE to permanently delete the selected records:') || '';
+    if (typed.trim().toUpperCase() !== 'PURGE') {
+      alert('Purge cancelled.');
+      return;
+    }
+
+    withTransaction(() => {
+      checked.forEach(cb => {
+        const id = parseInt(cb.getAttribute('data-id'), 10);
+        const sample = queryAll(
+          'SELECT sample_id, status FROM samples WHERE id = ? LIMIT 1;',
+          [id]
+        )[0] || {};
+
+        if (String(sample.status || '').toLowerCase() !== 'deleted') {
+          return;
+        }
+
+        recordSampleEvent({
+          sampleRowId: id,
+          sampleId: sample.sample_id,
+          action: 'purge',
+          details: { source: 'deleted_tab', mode: 'permanent_delete' },
+        });
+
+        runSql('DELETE FROM samples WHERE id = ?;', [id]);
+      });
     });
 
     if (typeof makeDbDirty === 'function') {

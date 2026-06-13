@@ -2,7 +2,7 @@ import { appState } from '../state.js';
 import { MASTER_DB_FILENAME, LAST_DB_NAME_KEY } from '../config.js';
 import { initSchema } from '../db/schema.js';
 import { cacheDbToLocalStorage } from '../services/localCache.js';
-import { saveDbToR2, loadDbFromR2 } from '../services/r2Service.js';
+import { saveDbToR2, loadDbFromR2, checkR2Status } from '../services/r2Service.js';
 import { downloadBlob } from '../utils/download.js';
 
 export function bindDbControlEvents({
@@ -179,6 +179,15 @@ function bindR2Buttons({
       loadDbFromR2({
         refreshAllViews,
         refreshFreezerMenus,
+        updateVersionBadge,
+      });
+    });
+  }
+
+  const btnCheckR2 = document.getElementById('btn-check-r2');
+  if (btnCheckR2) {
+    btnCheckR2.addEventListener('click', () => {
+      checkR2Status({
         updateVersionBadge,
       });
     });

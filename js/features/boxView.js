@@ -1,8 +1,7 @@
-console.log('NEW boxView.js loaded');
-
 import { appState } from '../state.js';
-import { queryAll } from '../db/query.js';
+import { queryAll, runSql, withTransaction } from '../db/query.js';
 import { escapeHtml } from '../utils/string.js';
+import { makeDbDirty } from './dbStatus.js';
 
 export function renderBoxes() {
   const container = document.getElementById('boxes-container');
@@ -18,12 +17,13 @@ export function renderBoxes() {
       b.freezer_no,
       b.rack,
       b.box_label,
+      b.capacity,
       COUNT(s.id) AS sample_count
     FROM boxes b
     LEFT JOIN samples s 
       ON s.box_id = b.id
      AND (s.status IS NULL OR s.status NOT IN ('archived','retired','discarded','consumed','deleted'))
-    GROUP BY b.id, b.storage_temperature, b.freezer_no, b.rack, b.box_label
+    GROUP BY b.id, b.storage_temperature, b.freezer_no, b.rack, b.box_label, b.capacity
     ORDER BY b.storage_temperature, b.freezer_no, b.rack, b.box_label;
   `);
 
@@ -94,6 +94,10 @@ export function renderBoxes() {
     groupBoxes.forEach(box => {
       const card = document.createElement('div');
       card.className = 'box-card';
+      const capacity = Number(box.capacity) || 0;
+      if (capacity > 0 && Number(box.sample_count) > capacity) {
+        card.classList.add('box-card-over-capacity');
+      }
 
       const cardHeader = document.createElement('div');
       cardHeader.style.display = 'flex';
@@ -102,9 +106,12 @@ export function renderBoxes() {
 
       const infoDiv = document.createElement('div');
       const rackText = box.rack ? `Rack: ${box.rack}` : '';
+      const capacityText = capacity > 0
+        ? `${box.sample_count} / ${capacity} tubes`
+        : `${box.sample_count} tubes`;
       infoDiv.innerHTML = `
         <div><strong>${escapeHtml(box.box_label)}</strong></div>
-        <div class="small">${escapeHtml(rackText)}${rackText && box.sample_count ? ' · ' : ''}${escapeHtml(box.sample_count)} tubes</div>
+        <div class="small">${escapeHtml(rackText)}${rackText ? ' · ' : ''}${escapeHtml(capacityText)}</div>
       `;
       cardHeader.appendChild(infoDiv);
 
@@ -118,6 +125,30 @@ export function renderBoxes() {
       }
 
       card.appendChild(cardHeader);
+
+      const capacityEditor = document.createElement('div');
+      capacityEditor.className = 'box-capacity-row';
+      capacityEditor.innerHTML = `
+        <label class="small" for="box-capacity-${box.id}">Capacity</label>
+        <input
+          id="box-capacity-${box.id}"
+          type="number"
+          min="0"
+          step="1"
+          value="${capacity > 0 ? capacity : ''}"
+          placeholder="optional"
+          data-box-capacity-id="${box.id}"
+        >
+        <button type="button" class="btn-save-box-capacity" data-box-id="${box.id}">Save</button>
+      `;
+      card.appendChild(capacityEditor);
+
+      if (capacity > 0 && Number(box.sample_count) > capacity) {
+        const warning = document.createElement('div');
+        warning.className = 'small box-capacity-warning';
+        warning.textContent = `Over capacity by ${Number(box.sample_count) - capacity} tubes.`;
+        card.appendChild(warning);
+      }
 
       const samples = queryAll(`
         SELECT sample_id, status, date, species_genotype, model, tissue, sample_type, processing, project
@@ -211,5 +242,26 @@ export function renderBoxes() {
 
     groupDiv.appendChild(grid);
     container.appendChild(groupDiv);
+  });
+
+  container.querySelectorAll('.btn-save-box-capacity').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const boxId = parseInt(btn.getAttribute('data-box-id'), 10);
+      const input = container.querySelector(`[data-box-capacity-id="${boxId}"]`);
+      const rawValue = input?.value || '';
+      const capacity = rawValue.trim() === '' ? null : parseInt(rawValue, 10);
+
+      if (rawValue.trim() !== '' && (!Number.isFinite(capacity) || capacity < 0)) {
+        alert('Capacity must be empty or a non-negative number.');
+        return;
+      }
+
+      withTransaction(() => {
+        runSql('UPDATE boxes SET capacity = ? WHERE id = ?;', [capacity, boxId]);
+      });
+
+      makeDbDirty();
+      renderBoxes();
+    });
   });
 }

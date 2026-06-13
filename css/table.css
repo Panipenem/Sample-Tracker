@@ -1,7 +1,9 @@
 #samples-table,
 #archived-table,
 #deleted-table,
-#audit-table {
+#audit-table,
+#quality-table,
+#sample-detail-history-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
@@ -16,7 +18,11 @@
 #deleted-table th,
 #deleted-table td,
 #audit-table th,
-#audit-table td {
+#audit-table td,
+#quality-table th,
+#quality-table td,
+#sample-detail-history-table th,
+#sample-detail-history-table td {
   border: 1px solid #d1d5db;
   padding: 6px 8px;
   text-align: left;
@@ -26,7 +32,9 @@
 #samples-table th,
 #archived-table th,
 #deleted-table th,
-#audit-table th {
+#audit-table th,
+#quality-table th,
+#sample-detail-history-table th {
   background-color: #f3f4f6;
   font-weight: 600;
 }
@@ -109,21 +117,27 @@
 #samples-table tbody tr:nth-child(odd),
 #archived-table tbody tr:nth-child(odd),
 #deleted-table tbody tr:nth-child(odd),
-#audit-table tbody tr:nth-child(odd) {
+#audit-table tbody tr:nth-child(odd),
+#quality-table tbody tr:nth-child(odd),
+#sample-detail-history-table tbody tr:nth-child(odd) {
   background-color: #f9fafb;
 }
 
 #samples-table tbody tr:nth-child(even),
 #archived-table tbody tr:nth-child(even),
 #deleted-table tbody tr:nth-child(even),
-#audit-table tbody tr:nth-child(even) {
+#audit-table tbody tr:nth-child(even),
+#quality-table tbody tr:nth-child(even),
+#sample-detail-history-table tbody tr:nth-child(even) {
   background-color: #ffffff;
 }
 
 #samples-table tbody tr:hover,
 #archived-table tbody tr:hover,
 #deleted-table tbody tr:hover,
-#audit-table tbody tr:hover {
+#audit-table tbody tr:hover,
+#quality-table tbody tr:hover,
+#sample-detail-history-table tbody tr:hover {
   background-color: #e5f0ff;
 }
 

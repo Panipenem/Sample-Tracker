@@ -6,13 +6,37 @@ export function renderAuditLog() {
   if (!tbody) return;
 
   tbody.innerHTML = '';
+  renderAuditActionOptions();
+
+  const search = (document.getElementById('audit-search-input')?.value || '')
+    .trim()
+    .toLowerCase();
+  const action = document.getElementById('audit-action-filter')?.value || '';
+  const where = [];
+  const params = [];
+
+  if (search) {
+    where.push(`(
+      LOWER(COALESCE(sample_id, '')) LIKE ?
+      OR LOWER(COALESCE(details_json, '')) LIKE ?
+    )`);
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (action) {
+    where.push('action = ?');
+    params.push(action);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const rows = queryAll(`
     SELECT created_at, action, sample_id, details_json
     FROM sample_events
+    ${whereSql}
     ORDER BY id DESC
     LIMIT 200;
-  `);
+  `, params);
 
   rows.forEach(row => {
     const tr = document.createElement('tr');
@@ -27,6 +51,43 @@ export function renderAuditLog() {
 
     tbody.appendChild(tr);
   });
+}
+
+export function bindAuditLogEvents({ renderAuditLog: rerender } = {}) {
+  const search = document.getElementById('audit-search-input');
+  const action = document.getElementById('audit-action-filter');
+
+  if (search && typeof rerender === 'function') {
+    search.addEventListener('input', rerender);
+  }
+
+  if (action && typeof rerender === 'function') {
+    action.addEventListener('change', rerender);
+  }
+}
+
+function renderAuditActionOptions() {
+  const select = document.getElementById('audit-action-filter');
+  if (!select) return;
+
+  const current = select.value;
+  const actions = queryAll(`
+    SELECT DISTINCT action
+    FROM sample_events
+    ORDER BY action ASC;
+  `);
+
+  select.innerHTML = '<option value="">All actions</option>';
+
+  actions.forEach(row => {
+    if (!row.action) return;
+    const opt = document.createElement('option');
+    opt.value = row.action;
+    opt.textContent = row.action;
+    select.appendChild(opt);
+  });
+
+  select.value = current;
 }
 
 function formatDetails(detailsJson) {

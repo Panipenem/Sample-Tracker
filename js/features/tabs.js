@@ -4,6 +4,7 @@ const TAB_SECTION_IDS = {
   archived: 'section-archived',
   deleted: 'section-deleted',
   audit: 'section-audit',
+  quality: 'section-quality',
   boxes: 'section-boxes',
 };
 

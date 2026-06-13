@@ -104,8 +104,17 @@ import {
 } from './features/boxView.js';
 
 import {
-  renderAuditLog
+  renderAuditLog,
+  bindAuditLogEvents,
 } from './features/auditLog.js';
+
+import {
+  renderDataQuality,
+} from './features/dataQuality.js';
+
+import {
+  bindSampleDetailEvents,
+} from './features/sampleDetail.js';
 
 import { 
     bindBatchEditEvents 
@@ -150,6 +159,7 @@ import {
     renderArchivedSamples();
     renderDeletedSamples();
     renderAuditLog();
+    renderDataQuality();
     renderBoxes();
   }
 
@@ -189,6 +199,12 @@ import {
   bindSampleActionEvents({
     makeDbDirty,
     refreshAllViews,
+  });
+
+  bindSampleDetailEvents();
+
+  bindAuditLogEvents({
+    renderAuditLog,
   });
 
   bindBatchEditEvents({

@@ -39,6 +39,7 @@
     <div class="db-row">
       <button id="btn-load-r2">Load ← R2</button>
       <button id="btn-save-r2">Sync → R2</button>
+      <button id="btn-check-r2">Check R2 status</button>
       <button id="btn-export-db">Save Master DB (.sqlite)</button>
       <button id="btn-backup-db">Backup DB</button>
     </div>
@@ -57,6 +58,7 @@
     <button class="tab-button" data-tab="archived">Archived</button>
     <button class="tab-button" data-tab="deleted">Deleted</button>
     <button class="tab-button" data-tab="audit">Audit Log</button>
+    <button class="tab-button" data-tab="quality">Data Quality</button>
     <button class="tab-button" data-tab="boxes">Box View</button>
   </div>
 
@@ -327,6 +329,7 @@
         </div>
         <div style="margin-left:auto;">
           <button id="btn-restore-deleted">Restore selected</button>
+          <button id="btn-purge-deleted" style="background:#4b0000;color:#fff;">Purge selected</button>
         </div>
       </div>
     </div>
@@ -356,7 +359,17 @@
   <div class="section" id="section-audit">
     <h2>Audit Log</h2>
     <div class="sticky-toolbar">
-      <div class="small">Shows the latest 200 sample events recorded in this SQLite database.</div>
+      <div class="flex">
+        <label>Search Sample ID / details
+          <input type="text" id="audit-search-input" placeholder="Type to filter audit log...">
+        </label>
+        <label>Action
+          <select id="audit-action-filter">
+            <option value="">(all)</option>
+          </select>
+        </label>
+      </div>
+      <div class="small">Shows the latest 200 matching sample events recorded in this SQLite database.</div>
     </div>
     <table id="audit-table">
       <thead>
@@ -371,9 +384,29 @@
     </table>
   </div>
 
+  <!-- Data quality -->
+  <div class="section" id="section-quality">
+    <h2>Data Quality</h2>
+    <div id="data-quality-summary" class="quality-grid"></div>
+    <h3>Records to review</h3>
+    <table id="quality-table">
+      <thead>
+      <tr>
+        <th>Issue</th>
+        <th>Sample ID</th>
+        <th>Date</th>
+        <th>Project</th>
+        <th>Details</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
   <!-- Box view -->
   <div class="section" id="section-boxes">
     <h2>Box View</h2>
+    <div class="small">Capacity is optional. Set it per box to show occupancy such as 32 / 81 tubes.</div>
     <div id="boxes-container"></div>
   </div>
 
@@ -586,6 +619,17 @@
           <button type="button" id="batch-edit-apply">Apply to selected</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Sample detail modal -->
+  <div id="sample-detail-backdrop" class="modal-backdrop hidden">
+    <div class="wizard-modal sample-detail-modal">
+      <div class="wizard-header">
+        <div class="wizard-title" id="sample-detail-title">Sample details</div>
+        <button type="button" id="sample-detail-close" class="wizard-close-btn">×</button>
+      </div>
+      <div id="sample-detail-body" class="wizard-step-body"></div>
     </div>
   </div>
 </main>
