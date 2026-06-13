@@ -7,7 +7,7 @@ const DEFAULT_BOX_CAPACITY = 81;
 
 export function renderBoxes() {
   renderBoxContainer({
-    container: document.getElementById('boxes-view-container'),
+    container: document.getElementById('boxes-view-container') || document.getElementById('boxes-container'),
     editableCapacity: false,
   });
 

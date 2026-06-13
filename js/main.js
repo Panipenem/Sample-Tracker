@@ -114,11 +114,6 @@ import {
 } from './features/dataQuality.js';
 
 import {
-  renderDashboard,
-  bindDashboardEvents,
-} from './features/dashboard.js';
-
-import {
   bindSampleDetailEvents,
 } from './features/sampleDetail.js';
 
@@ -152,7 +147,6 @@ import {
   initSqlJs({ locateFile: file => 'sql-wasm.wasm' }).then(SQLLib => {
     appState.SQL = SQLLib;
     document.getElementById('db-status').textContent = 'sql.js loaded. Click "New in-memory DB" or load a .sqlite file.';
-    renderDashboard();
     updateVersionBadge();
     // sql.js 就绪后尝试自动加载上一次缓存的 DB
     tryAutoLoadLastDb({
@@ -163,7 +157,6 @@ import {
   });
 
   function refreshAllViews() {
-    renderDashboard();
     renderSamples();
     renderArchivedSamples();
     renderDeletedSamples();
@@ -193,9 +186,7 @@ import {
   // 自动根据日期生成 Sample ID：YYYYMMDD-001, 002, ...
   bindSampleIdEvents();
 
-  bindTabEvents('dashboard');
-
-  bindDashboardEvents();
+  bindTabEvents('form');
 
   bindFreezerControlEvents();
 

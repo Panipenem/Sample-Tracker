@@ -1,5 +1,4 @@
 const TAB_SECTION_IDS = {
-  dashboard: 'section-dashboard',
   form: 'section-form',
   samples: 'section-samples',
   archived: 'section-archived',
@@ -61,5 +60,5 @@ function bindSettingsTabEvents() {
     });
   });
 
-  setActiveSettingsPanel('deleted');
+  setActiveSettingsPanel('boxes');
 }

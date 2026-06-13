@@ -149,17 +149,27 @@ main {
   overflow-x: auto;
 }
 
+.toolbar-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
 .column-controls {
   position: relative;
-  display: inline-block;
-  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  z-index: 45;
 }
 
 .column-menu {
   position: absolute;
-  left: 0;
+  right: 0;
   top: calc(100% + 6px);
-  z-index: 35;
+  z-index: 80;
   display: grid;
   grid-template-columns: repeat(2, minmax(150px, 1fr));
   gap: 6px 10px;
@@ -180,5 +190,27 @@ main {
   align-items: center;
   gap: 6px;
   margin: 0;
+  font-size: 12px;
+}
+
+.pager-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.pager-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+
+.pager-jump input {
+  width: 64px;
+  padding: 3px 5px;
   font-size: 12px;
 }

@@ -129,14 +129,19 @@ function renderPager({
   infoId,
   prevId,
   nextId,
+  inputId,
+  goId,
   page,
   total,
   onPrev,
   onNext,
+  onPage,
 }) {
   const info = document.getElementById(infoId);
   const prev = document.getElementById(prevId);
   const next = document.getElementById(nextId);
+  const input = document.getElementById(inputId);
+  const go = document.getElementById(goId);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   if (info) {
@@ -155,6 +160,23 @@ function renderPager({
     next.style.display = totalPages > 1 ? 'inline-block' : 'none';
     next.disabled = page >= totalPages;
     next.onclick = onNext;
+  }
+
+  if (input) {
+    input.max = String(totalPages);
+    input.value = String(page);
+    input.disabled = totalPages <= 1;
+
+    input.onkeydown = event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      jumpToPage(input, totalPages, onPage);
+    };
+  }
+
+  if (go) {
+    go.disabled = totalPages <= 1;
+    go.onclick = () => jumpToPage(input, totalPages, onPage);
   }
 }
 
@@ -302,6 +324,8 @@ export function renderSamples({
     infoId: 'samples-page-info',
     prevId: 'samples-prev-page',
     nextId: 'samples-next-page',
+    inputId: 'samples-page-input',
+    goId: 'samples-go-page',
     page: tableState.samplesPage,
     total,
     onPrev: () => {
@@ -312,7 +336,26 @@ export function renderSamples({
       tableState.samplesPage = Math.min(totalPages, tableState.samplesPage + 1);
       renderSamples({ makeDbDirty, refreshAllViews, loadSampleToForm });
     },
+    onPage: page => {
+      tableState.samplesPage = page;
+      renderSamples({ makeDbDirty, refreshAllViews, loadSampleToForm });
+    },
   });
+}
+
+function jumpToPage(input, totalPages, onPage) {
+  if (!input || typeof onPage !== 'function') return;
+
+  const requested = parseInt(input.value, 10);
+  if (!Number.isFinite(requested)) {
+    input.value = '1';
+    onPage(1);
+    return;
+  }
+
+  const page = Math.min(totalPages, Math.max(1, requested));
+  input.value = String(page);
+  onPage(page);
 }
 
 function getVisibleSampleColumns() {
@@ -609,6 +652,8 @@ export function renderArchivedSamples() {
     infoId: 'archived-page-info',
     prevId: 'archived-prev-page',
     nextId: 'archived-next-page',
+    inputId: 'archived-page-input',
+    goId: 'archived-go-page',
     page: tableState.archivedPage,
     total,
     onPrev: () => {
@@ -617,6 +662,10 @@ export function renderArchivedSamples() {
     },
     onNext: () => {
       tableState.archivedPage = Math.min(totalPages, tableState.archivedPage + 1);
+      renderArchivedSamples();
+    },
+    onPage: page => {
+      tableState.archivedPage = page;
       renderArchivedSamples();
     },
   });
@@ -702,6 +751,8 @@ export function renderDeletedSamples() {
     infoId: 'deleted-page-info',
     prevId: 'deleted-prev-page',
     nextId: 'deleted-next-page',
+    inputId: 'deleted-page-input',
+    goId: 'deleted-go-page',
     page: tableState.deletedPage,
     total,
     onPrev: () => {
@@ -710,6 +761,10 @@ export function renderDeletedSamples() {
     },
     onNext: () => {
       tableState.deletedPage = Math.min(totalPages, tableState.deletedPage + 1);
+      renderDeletedSamples();
+    },
+    onPage: page => {
+      tableState.deletedPage = page;
       renderDeletedSamples();
     },
   });

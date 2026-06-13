@@ -54,25 +54,12 @@
 
   <!-- Tabs for views -->
   <div class="tabs">
-    <button class="tab-button active" data-tab="dashboard">Dashboard</button>
-    <button class="tab-button" data-tab="form">Data Entry</button>
+    <button class="tab-button active" data-tab="form">Data Entry</button>
     <button class="tab-button" data-tab="samples">Sample List</button>
     <button class="tab-button" data-tab="archived">Archived</button>
     <button class="tab-button" data-tab="quality">Data Quality</button>
     <button class="tab-button" data-tab="boxes">Box View</button>
     <button class="tab-button" data-tab="settings">Settings</button>
-  </div>
-
-  <!-- Dashboard -->
-  <div class="section" id="section-dashboard">
-    <h2>Dashboard</h2>
-    <div id="dashboard-summary" class="dashboard-grid"></div>
-    <div class="dashboard-actions">
-      <button type="button" class="tab-jump" data-target-tab="samples">Open Sample List</button>
-      <button type="button" class="tab-jump" data-target-tab="quality">Review Data Quality</button>
-      <button type="button" class="tab-jump" data-target-tab="boxes">Open Box View</button>
-      <button type="button" class="tab-jump" data-target-tab="settings" data-settings-target="audit">Open Audit Log</button>
-    </div>
   </div>
 
   <!-- Sample form -->
@@ -240,10 +227,6 @@
         <input type="text" id="label-export-date" placeholder="如：20250213" maxlength="8">
       </label>
     </div>
-    <div class="column-controls">
-      <button type="button" id="btn-toggle-columns">Columns</button>
-      <div id="sample-column-menu" class="column-menu hidden"></div>
-    </div>
     <div class="flex" style="margin-top:6px;">
       <div>
         <button id="btn-export-xlsx">Export all (.xlsx)</button>
@@ -251,14 +234,22 @@
         <button id="btn-open-secondary-wizard">Secondary wizard</button>
         <button id="btn-batch-edit">Batch edit selected</button>
       </div>
-      <div style="margin-left:auto;">
+      <div class="toolbar-right-actions">
+        <div class="column-controls">
+          <button type="button" id="btn-toggle-columns">Columns</button>
+          <div id="sample-column-menu" class="column-menu hidden"></div>
+        </div>
         <button id="btn-archive-selected">Archive selected</button>
         <button id="btn-delete-selected" style="background:#b40000;color:#fff;">Soft delete selected</button>
       </div>
     </div>
-    <div class="flex" style="margin-top:6px;">
+    <div class="pager-row">
       <button type="button" id="samples-prev-page" style="display:none;">Prev</button>
       <span id="samples-page-info" class="small">Showing 0-0 / 0 · 100 per page</span>
+      <label class="pager-jump small">Page
+        <input type="number" id="samples-page-input" min="1" step="1">
+      </label>
+      <button type="button" id="samples-go-page">Go</button>
       <button type="button" id="samples-next-page" style="display:none;">Next</button>
     </div>
     </div>
@@ -298,9 +289,13 @@
         </label>
       </div>
       <div class="flex" style="margin-top:6px;">
-        <div>
+        <div class="pager-row">
           <button type="button" id="archived-prev-page" style="display:none;">Prev</button>
           <span id="archived-page-info" class="small">Showing 0-0 / 0 · 100 per page</span>
+          <label class="pager-jump small">Page
+            <input type="number" id="archived-page-input" min="1" step="1">
+          </label>
+          <button type="button" id="archived-go-page">Go</button>
           <button type="button" id="archived-next-page" style="display:none;">Next</button>
         </div>
         <div style="margin-left:auto;">
@@ -365,13 +360,13 @@
   <div class="section" id="section-settings">
     <h2>Settings</h2>
     <div class="settings-tabs">
-      <button type="button" class="settings-tab-button active" data-settings-tab="deleted">Deleted samples</button>
+      <button type="button" class="settings-tab-button active" data-settings-tab="boxes">Box capacity</button>
+      <button type="button" class="settings-tab-button" data-settings-tab="deleted">Deleted samples</button>
       <button type="button" class="settings-tab-button" data-settings-tab="audit">Audit Log</button>
-      <button type="button" class="settings-tab-button" data-settings-tab="boxes">Box capacity</button>
     </div>
 
     <!-- Deleted samples -->
-    <div class="settings-panel" id="settings-panel-deleted">
+    <div class="settings-panel hidden" id="settings-panel-deleted">
       <h3>Deleted samples</h3>
       <div class="sticky-toolbar">
         <div class="flex">
@@ -380,9 +375,13 @@
           </label>
         </div>
         <div class="flex" style="margin-top:6px;">
-          <div>
+          <div class="pager-row">
             <button type="button" id="deleted-prev-page" style="display:none;">Prev</button>
             <span id="deleted-page-info" class="small">Showing 0-0 / 0 · 100 per page</span>
+            <label class="pager-jump small">Page
+              <input type="number" id="deleted-page-input" min="1" step="1">
+            </label>
+            <button type="button" id="deleted-go-page">Go</button>
             <button type="button" id="deleted-next-page" style="display:none;">Next</button>
           </div>
           <div style="margin-left:auto;">
@@ -447,7 +446,7 @@
     </div>
 
     <!-- Box view -->
-    <div class="settings-panel hidden" id="settings-panel-boxes">
+    <div class="settings-panel" id="settings-panel-boxes">
       <h3>Box capacity</h3>
       <div class="small">Default capacity is 81 tubes. Change a box only when it uses a different layout.</div>
       <div id="box-capacity-container"></div>
