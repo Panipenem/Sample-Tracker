@@ -95,6 +95,15 @@ function formatDetails(detailsJson) {
 
   try {
     const details = JSON.parse(detailsJson);
+    if (details.changes && typeof details.changes === 'object') {
+      const changeText = Object.entries(details.changes)
+        .map(([field, change]) => `${field}: ${change.from || '(empty)'} -> ${change.to || '(empty)'}`)
+        .join(' | ');
+      return [details.source ? `source: ${details.source}` : '', changeText]
+        .filter(Boolean)
+        .join(' | ');
+    }
+
     return Object.entries(details)
       .map(([key, value]) => `${key}: ${formatValue(value)}`)
       .join(' | ');

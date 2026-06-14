@@ -11,6 +11,7 @@ const SETTINGS_PANEL_IDS = {
   deleted: 'settings-panel-deleted',
   audit: 'settings-panel-audit',
   boxes: 'settings-panel-boxes',
+  presets: 'settings-panel-presets',
 };
 
 export function bindTabEvents(defaultTab = 'form') {

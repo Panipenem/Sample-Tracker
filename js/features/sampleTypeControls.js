@@ -1,4 +1,4 @@
-import { DATA_ENTRY_SAMPLE_TYPES } from '../db/sampleTypes.js';
+import { getDataEntrySampleTypes } from '../db/sampleTypes.js';
 import { clearDynamicOptions } from '../utils/select.js';
 
 export function initSampleTypeSelect() {
@@ -13,7 +13,7 @@ export function initSampleTypeSelect() {
   emptyOpt.textContent = '(select)';
   selectEl.appendChild(emptyOpt);
 
-  DATA_ENTRY_SAMPLE_TYPES.forEach(type => {
+  getDataEntrySampleTypes().forEach(type => {
     const opt = document.createElement('option');
     opt.value = type;
     opt.textContent = type;

@@ -22,7 +22,7 @@
 }
 
 #archived-table {
-  min-width: 1420px;
+  min-width: 1500px;
 }
 
 #audit-table,
@@ -123,9 +123,9 @@
 
 #archived-table th:last-child,
 #archived-table td:last-child {
-  width: 150px;
-  min-width: 150px;
-  max-width: 150px;
+  width: 170px;
+  min-width: 170px;
+  max-width: 170px;
 }
 
 .row-actions {

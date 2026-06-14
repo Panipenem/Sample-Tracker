@@ -213,15 +213,24 @@ function bindApplyBatchEdit(
               details: {
                 source: 'batch_edit_modal',
                 fields: {
-                  project: !!projVal,
-                  notes: !!notesVal,
-                  processing: !!procVal,
-                  status: !!statusVal,
-                  species_genotype: !!speciesVal,
-                  model: !!modelVal,
-                  tissue: !!tissueVal,
-                  sample_type: !!typeVal,
-                  storage: wantStoragePatch,
+                  ...(projVal ? { project: projVal } : {}),
+                  ...(notesVal ? { notes: notesVal } : {}),
+                  ...(procVal ? { processing: procVal } : {}),
+                  ...(statusVal ? { status: statusVal } : {}),
+                  ...(speciesVal ? { species_genotype: speciesVal } : {}),
+                  ...(modelVal ? { model: modelVal } : {}),
+                  ...(tissueVal ? { tissue: tissueVal } : {}),
+                  ...(typeVal ? { sample_type: typeVal } : {}),
+                  ...(wantStoragePatch
+                    ? {
+                        storage: {
+                          storage_temperature: tempRaw || '(keep)',
+                          freezer_no: freezerRaw || '(keep)',
+                          rack: rackRaw || '(keep)',
+                          box_label: boxLabelRaw || '(keep)',
+                        },
+                      }
+                    : {}),
                 },
               },
             });

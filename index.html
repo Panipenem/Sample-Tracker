@@ -9,11 +9,11 @@
   <meta http-equiv="Expires" content="0">
   
   
-  <link rel="stylesheet" href="./css/base.css?v=archive-actions">
-  <link rel="stylesheet" href="./css/layout.css?v=archive-actions">
-  <link rel="stylesheet" href="./css/table.css?v=archive-actions">
-  <link rel="stylesheet" href="./css/modal.css?v=archive-actions">
-  <link rel="stylesheet" href="./css/components.css?v=archive-actions">
+  <link rel="stylesheet" href="./css/base.css?v=preset-settings">
+  <link rel="stylesheet" href="./css/layout.css?v=preset-settings">
+  <link rel="stylesheet" href="./css/table.css?v=preset-settings">
+  <link rel="stylesheet" href="./css/modal.css?v=preset-settings">
+  <link rel="stylesheet" href="./css/components.css?v=preset-settings">
 
 
 </head>
@@ -366,6 +366,7 @@
     <h2>Settings</h2>
     <div class="settings-tabs">
       <button type="button" class="settings-tab-button active" data-settings-tab="boxes">Box capacity</button>
+      <button type="button" class="settings-tab-button" data-settings-tab="presets">Presets</button>
       <button type="button" class="settings-tab-button" data-settings-tab="deleted">Deleted samples</button>
       <button type="button" class="settings-tab-button" data-settings-tab="audit">Audit Log</button>
     </div>
@@ -455,6 +456,34 @@
       <h3>Box capacity</h3>
       <div class="small">Default capacity is 81 tubes. Change a box only when it uses a different layout.</div>
       <div id="box-capacity-container"></div>
+    </div>
+
+    <div class="settings-panel hidden" id="settings-panel-presets">
+      <h3>Preset settings</h3>
+      <div class="small">These settings are saved in this browser and used by Data Entry and Secondary Sample Wizard.</div>
+
+      <div class="preset-settings-grid">
+        <label>Data Entry sample types
+          <textarea id="settings-data-entry-types" spellcheck="false"></textarea>
+        </label>
+
+        <label>Secondary wizard Step 1 presets
+          <textarea id="settings-secondary-presets" spellcheck="false"></textarea>
+        </label>
+
+        <label>Secondary wizard type abbreviations (JSON)
+          <textarea id="settings-secondary-short" spellcheck="false"></textarea>
+        </label>
+
+        <label>Secondary wizard Step 2 processing presets (JSON)
+          <textarea id="settings-secondary-processing" spellcheck="false"></textarea>
+        </label>
+      </div>
+
+      <div class="flex" style="margin-top:10px;">
+        <button type="button" id="btn-save-preset-settings" class="btn-primary">Save presets</button>
+        <button type="button" id="btn-reset-preset-settings" class="btn-secondary">Reset to defaults</button>
+      </div>
     </div>
   </div>
 
@@ -685,6 +714,6 @@
 
 <script src="sql-wasm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="./js/main.js?v=archive-actions"></script>
+<script type="module" src="./js/main.js?v=preset-settings"></script>
 
 </body></html>

@@ -2,7 +2,7 @@ import { appState } from '../state.js';
 import { recordSampleEvent } from '../db/audit.js';
 import { getOrCreateBoxId } from '../db/boxes.js';
 import { queryAll, withTransaction } from '../db/query.js';
-import { DATA_ENTRY_SAMPLE_TYPES } from '../db/sampleTypes.js';
+import { getDataEntrySampleTypes } from '../db/sampleTypes.js';
 import { validateSampleInput } from '../utils/validation.js';
 import { escapeHtml } from '../utils/string.js';
 import { addFreezerToListByTemp } from './freezerSelect.js';
@@ -281,6 +281,9 @@ function saveSampleEdit() {
   const rowId = parseInt(getField('sample-edit-row-id'), 10);
   if (!Number.isFinite(rowId)) return;
 
+  const previous = getSample(rowId);
+  if (!previous) return;
+
   const sample = {
     sample_id: getField('sample-edit-sample-id').trim(),
     date: getField('sample-edit-date') || null,
@@ -367,7 +370,10 @@ function saveSampleEdit() {
         sampleRowId: rowId,
         sampleId: sample.sample_id,
         action: 'update',
-        details: { source: 'sample_modal' },
+        details: {
+          source: 'sample_modal',
+          changes: buildSampleChanges(previous, sample),
+        },
       });
     });
   } catch (err) {
@@ -406,7 +412,7 @@ function textControl(id, value, { required = false, maxlength = '' } = {}) {
 }
 
 function sampleTypeSelect(value) {
-  const values = new Set(DATA_ENTRY_SAMPLE_TYPES);
+  const values = new Set(getDataEntrySampleTypes());
   if (value) values.add(value);
 
   return `
@@ -464,6 +470,42 @@ function temperatureSelect(value) {
 
 function getField(id) {
   return document.getElementById(id)?.value || '';
+}
+
+function buildSampleChanges(previous, next) {
+  const fields = [
+    'sample_id',
+    'date',
+    'experiment_label',
+    'species_genotype',
+    'model',
+    'tissue',
+    'sample_type',
+    'processing',
+    'parent_sample_id',
+    'amount',
+    'project',
+    'status',
+    'notes',
+    'storage_temperature',
+    'freezer_no',
+    'rack',
+    'box_label',
+  ];
+  const changes = {};
+
+  fields.forEach(field => {
+    const before = normalizeAuditValue(previous[field]);
+    const after = normalizeAuditValue(next[field]);
+    if (before === after) return;
+    changes[field] = { from: before, to: after };
+  });
+
+  return changes;
+}
+
+function normalizeAuditValue(value) {
+  return value == null ? '' : String(value);
 }
 
 function detailItem(label, value, { html = false } = {}) {
@@ -541,6 +583,15 @@ function formatDetails(detailsJson) {
   if (!detailsJson) return '';
   try {
     const details = JSON.parse(detailsJson);
+    if (details.changes && typeof details.changes === 'object') {
+      const changeText = Object.entries(details.changes)
+        .map(([field, change]) => `${field}: ${change.from || '(empty)'} -> ${change.to || '(empty)'}`)
+        .join(' | ');
+      return [details.source ? `source: ${details.source}` : '', changeText]
+        .filter(Boolean)
+        .join(' | ');
+    }
+
     return Object.entries(details)
       .map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
       .join(' | ');

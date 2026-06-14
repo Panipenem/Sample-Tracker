@@ -141,6 +141,10 @@ import {
     initSampleTypeSelect 
 } from './features/sampleTypeControls.js';
 
+import {
+  bindPresetSettingsEvents,
+} from './features/presetSettings.js';
+
 
   // Initialize sql.js
   initSqlJs({ locateFile: file => 'sql-wasm.wasm' }).then(SQLLib => {
@@ -225,6 +229,10 @@ import {
   bindImportExportEvents({
     refreshAllViews,
     makeDbDirty,
+  });
+
+  bindPresetSettingsEvents({
+    refreshSampleTypeSelect: initSampleTypeSelect,
   });
 
   bindDbControlEvents({

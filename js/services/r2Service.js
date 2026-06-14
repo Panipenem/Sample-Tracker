@@ -12,14 +12,20 @@ import { initSchema } from '../db/schema.js';
 import { updateLocalCacheFromCurrentDb } from './localCache.js';
 
 function getRuntimeWriteToken() {
-  let token = sessionStorage.getItem(R2_WRITE_TOKEN_STORAGE_KEY) || '';
+  let token = localStorage.getItem(R2_WRITE_TOKEN_STORAGE_KEY) || '';
   if (token) return token;
 
-  token = prompt('Enter R2 write token for this browser session:') || '';
+  token = sessionStorage.getItem(R2_WRITE_TOKEN_STORAGE_KEY) || '';
+  if (token) {
+    localStorage.setItem(R2_WRITE_TOKEN_STORAGE_KEY, token);
+    return token;
+  }
+
+  token = prompt('Enter R2 write token. It will be remembered in this browser:') || '';
   token = token.trim();
 
   if (token) {
-    sessionStorage.setItem(R2_WRITE_TOKEN_STORAGE_KEY, token);
+    localStorage.setItem(R2_WRITE_TOKEN_STORAGE_KEY, token);
   }
 
   return token;

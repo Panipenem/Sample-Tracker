@@ -1,6 +1,6 @@
 import { appState } from '../state.js';
 import { recordSampleEvent } from '../db/audit.js';
-import { withTransaction } from '../db/query.js';
+import { queryAll, withTransaction } from '../db/query.js';
 import { getOrCreateBoxId } from '../db/boxes.js';
 import { validateSampleInput } from '../utils/validation.js';
 import {
@@ -103,6 +103,13 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
           : null;
 
         if (sampleRowId) {
+          const previous = queryAll(`
+            SELECT s.*, b.storage_temperature, b.freezer_no, b.rack, b.box_label
+            FROM samples s
+            LEFT JOIN boxes b ON s.box_id = b.id
+            WHERE s.id = ?
+            LIMIT 1;
+          `, [parseInt(sampleRowId, 10)])[0] || {};
           const updateStmt = appState.db.prepare(`
             UPDATE samples SET
               sample_id = ?,
@@ -149,7 +156,10 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
             sampleRowId: parseInt(sampleRowId, 10),
             sampleId: sample.sample_id,
             action: 'update',
-            details: { source: 'sample_form' },
+            details: {
+              source: 'sample_form',
+              changes: buildSampleChanges(previous, sample),
+            },
           });
         } else {
           const insertStmt = appState.db.prepare(`
@@ -212,4 +222,40 @@ function bindSampleSubmit({ makeDbDirty, refreshAllViews } = {}) {
       refreshAllViews();
     }
   });
+}
+
+function buildSampleChanges(previous, next) {
+  const fields = [
+    'sample_id',
+    'date',
+    'experiment_label',
+    'species_genotype',
+    'model',
+    'tissue',
+    'sample_type',
+    'processing',
+    'parent_sample_id',
+    'amount',
+    'project',
+    'status',
+    'notes',
+    'storage_temperature',
+    'freezer_no',
+    'rack',
+    'box_label',
+  ];
+  const changes = {};
+
+  fields.forEach(field => {
+    const before = normalizeAuditValue(previous[field]);
+    const after = normalizeAuditValue(next[field]);
+    if (before === after) return;
+    changes[field] = { from: before, to: after };
+  });
+
+  return changes;
+}
+
+function normalizeAuditValue(value) {
+  return value == null ? '' : String(value);
 }

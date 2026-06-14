@@ -79,7 +79,7 @@ function bindExportLabelsXlsx() {
 
       rows = queryAll(`
         SELECT sample_id, date, experiment_label, species_genotype, model, tissue,
-               sample_type, processing, status, notes
+               sample_type, processing, amount, status, notes
         FROM samples
         WHERE id IN (${placeholders})
           AND (status IS NULL OR status NOT IN ('retired','deleted'))
@@ -108,7 +108,7 @@ function bindExportLabelsXlsx() {
 
       rows = queryAll(`
         SELECT sample_id, date, experiment_label, species_genotype, model, tissue,
-               sample_type, processing, status, notes
+               sample_type, processing, amount, status, notes
         FROM samples
         WHERE date = ?
           AND (status IS NULL OR status NOT IN ('retired','deleted'))
@@ -129,6 +129,7 @@ function bindExportLabelsXlsx() {
       const tissue = r.tissue || '';
       const sample_type = (r.sample_type || '').trim();
       const processing = (r.processing || '').trim();
+      const amount = r.amount || '';
       const experiment_label = r.experiment_label || '';
       const notes = r.notes || ''
 
@@ -154,6 +155,7 @@ function bindExportLabelsXlsx() {
         group,
         experiment_label,
         tissue_sampletype_processing: combined,
+        amount,
         notes,
       };
     });

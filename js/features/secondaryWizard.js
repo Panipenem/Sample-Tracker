@@ -2,9 +2,10 @@ import { appState } from '../state.js';
 import { recordSampleEvent } from '../db/audit.js';
 import { queryAll, withTransaction } from '../db/query.js';
 import {
-  SECONDARY_SAMPLE_PRESETS,
-  SECONDARY_TYPE_SHORT,
-  SECONDARY_DEFAULT_PROCESSING,
+  getSecondarySamplePresets,
+  getSecondaryTypeShort,
+  setSecondaryTypeShort,
+  getSecondaryDefaultProcessing,
 } from '../db/sampleTypes.js';
 
 let wizardPrimaryIds = [];
@@ -29,8 +30,9 @@ function getTypeAbbrev(typeName) {
   const key = normalizeTypeKey(typeName);
   if (!key) return '';
 
-  if (SECONDARY_TYPE_SHORT[key]) {
-    return SECONDARY_TYPE_SHORT[key];
+  const typeShort = getSecondaryTypeShort();
+  if (typeShort[key]) {
+    return typeShort[key];
   }
 
   const words = key.split(/\s+/).filter(Boolean);
@@ -44,7 +46,8 @@ function getTypeAbbrev(typeName) {
   const ok = confirm(`Use abbreviation "${abbr}" for type "${key}" in sample_id?`);
   if (!ok) return '';
 
-  SECONDARY_TYPE_SHORT[key] = abbr;
+  typeShort[key] = abbr;
+  setSecondaryTypeShort(typeShort);
   return abbr;
 }
 
@@ -95,7 +98,7 @@ function initSecondaryPresetOptions() {
 
   container.innerHTML = '';
 
-  SECONDARY_SAMPLE_PRESETS.forEach(type => {
+  getSecondarySamplePresets().forEach(type => {
     const label = document.createElement('label');
 
     const input = document.createElement('input');
@@ -188,7 +191,7 @@ function buildProcessingUI() {
     const optionsDiv = document.createElement('div');
     optionsDiv.className = 'wizard-type-block-options';
 
-    const defaultList = SECONDARY_DEFAULT_PROCESSING[key] || [];
+    const defaultList = getSecondaryDefaultProcessing()[key] || [];
     const saved = localStorage.getItem('wizard_last_processing_' + key);
     const radioName = 'wizard-proc-' + key;
 
