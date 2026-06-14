@@ -202,10 +202,6 @@
   max-width: 920px;
 }
 
-.sample-edit-modal {
-  max-width: 920px;
-}
-
 .sample-edit-form {
   display: flex;
   flex-direction: column;
@@ -238,6 +234,7 @@
   align-items: flex-start;
   border-bottom: 1px solid var(--border);
   padding-bottom: 10px;
+  gap: 10px;
 }
 
 .sample-detail-modal .wizard-title {
@@ -245,6 +242,13 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.sample-detail-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .detail-title-id {

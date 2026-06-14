@@ -116,10 +116,6 @@ import {
   bindSampleDetailEvents,
 } from './features/sampleDetail.js';
 
-import {
-  bindSampleEditEvents,
-} from './features/sampleEdit.js';
-
 import { 
     bindBatchEditEvents 
 } from './features/batchEdit.js';
@@ -201,9 +197,7 @@ import {
     refreshAllViews,
   });
 
-  bindSampleDetailEvents();
-
-  bindSampleEditEvents({
+  bindSampleDetailEvents({
     makeDbDirty,
     refreshAllViews,
   });
