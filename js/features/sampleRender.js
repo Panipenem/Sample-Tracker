@@ -16,6 +16,7 @@ const SAMPLE_COLUMNS = [
   { key: 'tissue', label: 'Tissue', locked: true },
   { key: 'sample_type', label: 'Type' },
   { key: 'processing', label: 'Processing' },
+  { key: 'amount', label: 'Amount' },
   { key: 'notes', label: 'Notes' },
   { key: 'project', label: 'Project' },
   { key: 'status', label: 'Status', locked: true },
@@ -67,6 +68,7 @@ export function resetDeletedPagination() {
 
 export function bindSampleColumnEvents() {
   renderSampleColumnMenu();
+  applySampleColumnVisibility();
 
   const toggle = document.getElementById('btn-toggle-columns');
   const menu = document.getElementById('sample-column-menu');
@@ -109,6 +111,7 @@ function getSampleSelectSql(whereClause = '') {
            s.tissue,
            s.sample_type,
            s.processing,
+           s.amount,
            s.notes,
            s.project,
            s.status,
@@ -203,6 +206,7 @@ export function renderSamples({
     's.model',
     's.project',
     's.processing',
+    's.amount',
     's.species_genotype',
     's.experiment_label',
   ]);
@@ -276,6 +280,7 @@ export function renderSamples({
       <td data-column="tissue">${escapeHtml(row.tissue)}</td>
       <td data-column="sample_type">${escapeHtml(row.sample_type)}</td>
       <td data-column="processing">${escapeHtml(row.processing)}</td>
+      <td data-column="amount">${escapeHtml(row.amount)}</td>
       <td data-column="notes">${escapeHtml(row.notes)}</td>
       <td data-column="project">${escapeHtml(row.project)}</td>
       <td data-column="status">${statusHtml}</td>
@@ -577,6 +582,7 @@ export function renderArchivedSamples() {
     's.model',
     's.project',
     's.processing',
+    's.amount',
     's.species_genotype',
     's.experiment_label',
   ]);
@@ -694,6 +700,7 @@ export function renderDeletedSamples() {
     's.model',
     's.project',
     's.processing',
+    's.amount',
     's.species_genotype',
     's.experiment_label',
   ]);
