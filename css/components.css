@@ -202,34 +202,6 @@
   max-width: 920px;
 }
 
-.sample-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.sample-edit-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px 12px;
-}
-
-.sample-edit-form label {
-  margin: 0;
-  font-size: 12px;
-  color: #374151;
-}
-
-.sample-edit-form input,
-.sample-edit-form select,
-.sample-edit-form textarea {
-  margin-top: 3px;
-}
-
-.sample-edit-form textarea {
-  min-height: 64px;
-}
-
 .sample-detail-modal .wizard-header {
   align-items: flex-start;
   border-bottom: 1px solid var(--border);
@@ -302,6 +274,26 @@
   overflow-wrap: anywhere;
 }
 
+.detail-item-editing {
+  border-bottom-color: #dbeafe;
+}
+
+.detail-item-editing label.small {
+  margin: 0 0 3px;
+}
+
+.detail-item-editing input,
+.detail-item-editing select {
+  width: 100%;
+  margin: 0;
+  padding: 5px 7px;
+  font-size: 13px;
+}
+
+.sample-inline-edit-form {
+  margin: 0;
+}
+
 .detail-notes-panel,
 .detail-history-panel {
   grid-column: 1 / -1;
@@ -312,6 +304,13 @@
   color: #374151;
   line-height: 1.45;
   white-space: pre-wrap;
+}
+
+.detail-notes-edit {
+  width: 100%;
+  min-height: 72px;
+  margin: 0;
+  resize: vertical;
 }
 
 .detail-chip {

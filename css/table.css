@@ -21,6 +21,10 @@
   min-width: 1320px;
 }
 
+#archived-table {
+  min-width: 1420px;
+}
+
 #audit-table,
 #quality-table {
   min-width: 760px;

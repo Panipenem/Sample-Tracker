@@ -634,6 +634,9 @@ export function renderArchivedSamples() {
       <td>${escapeHtml(row.project)}</td>
       <td>${statusHtml}</td>
       <td>${escapeHtml(storageStr)}</td>
+      <td>
+        <button data-id="${id}" class="btn-details btn-secondary">Details</button>
+      </td>
     `;
 
     tbody.appendChild(tr);

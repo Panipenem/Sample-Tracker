@@ -201,41 +201,77 @@ function renderEdit(sample) {
   const body = document.getElementById('sample-detail-body');
   if (!body) return;
 
+  const children = queryAll(`
+    SELECT DISTINCT sample_id, status
+    FROM samples
+    WHERE parent_sample_id = ?
+    ORDER BY sample_id ASC;
+  `, [sample.sample_id || '']);
+  const events = queryAll(`
+    SELECT created_at, action, details_json
+    FROM sample_events
+    WHERE sample_row_id = ? OR sample_id = ?
+    ORDER BY id DESC
+    LIMIT 100;
+  `, [sample.id, sample.sample_id || '']);
+
   body.innerHTML = `
-    <form id="sample-detail-edit-form" class="sample-edit-form">
+    <form id="sample-detail-edit-form" class="detail-layout sample-inline-edit-form">
       <input type="hidden" id="sample-edit-row-id" value="${escapeHtml(sample.id)}">
 
-      <section class="detail-panel">
-        <h3>Overview</h3>
-        <div class="sample-edit-grid">
-          ${textInput('Sample ID', 'sample-edit-sample-id', sample.sample_id, { required: true })}
-          ${textInput('Date (YYYYMMDD)', 'sample-edit-date', sample.date, { maxlength: 8 })}
-          ${textInput('Experiment label', 'sample-edit-experiment-label', sample.experiment_label)}
-          ${textInput('Species / Genotype', 'sample-edit-species-genotype', sample.species_genotype)}
-          ${textInput('Model', 'sample-edit-model', sample.model)}
-          ${textInput('Tissue', 'sample-edit-tissue', sample.tissue)}
-          ${sampleTypeSelect(sample.sample_type)}
-          ${textInput('Processing', 'sample-edit-processing', sample.processing)}
-          ${textInput('Parent Sample ID', 'sample-edit-parent-sample-id', sample.parent_sample_id)}
-          ${textInput('Amount', 'sample-edit-amount', sample.amount)}
-          ${textInput('Project', 'sample-edit-project', sample.project)}
-          ${statusSelect(sample.status)}
-        </div>
-        <label>Notes
-          <textarea id="sample-edit-notes">${escapeHtml(sample.notes || '')}</textarea>
-        </label>
-      </section>
+      ${detailSection('Overview', [
+        editableDetailItem('Date', textControl('sample-edit-date', sample.date, { maxlength: 8 })),
+        editableDetailItem('Project', textControl('sample-edit-project', sample.project)),
+        editableDetailItem('Species / Genotype', textControl('sample-edit-species-genotype', sample.species_genotype)),
+        editableDetailItem('Model', textControl('sample-edit-model', sample.model)),
+        editableDetailItem('Tissue', textControl('sample-edit-tissue', sample.tissue)),
+        editableDetailItem('Type', sampleTypeSelect(sample.sample_type)),
+        editableDetailItem('Processing', textControl('sample-edit-processing', sample.processing)),
+        editableDetailItem('Amount', textControl('sample-edit-amount', sample.amount)),
+        editableDetailItem('Sample ID', textControl('sample-edit-sample-id', sample.sample_id, { required: true })),
+        editableDetailItem('Status', statusSelect(sample.status)),
+      ].join(''))}
 
-      <section class="detail-panel">
-        <h3>Storage</h3>
-        <div class="sample-edit-grid">
-          ${temperatureSelect(sample.storage_temperature)}
-          ${textInput('Freezer No.', 'sample-edit-freezer-no', sample.freezer_no)}
-          ${textInput('Rack', 'sample-edit-rack', sample.rack)}
-          ${textInput('Box Label', 'sample-edit-box-label', sample.box_label)}
-        </div>
+      ${detailSection('Storage', [
+        editableDetailItem('Temperature', temperatureSelect(sample.storage_temperature)),
+        editableDetailItem('Freezer', textControl('sample-edit-freezer-no', sample.freezer_no)),
+        editableDetailItem('Rack', textControl('sample-edit-rack', sample.rack)),
+        editableDetailItem('Box', textControl('sample-edit-box-label', sample.box_label)),
+      ].join(''))}
+
+      ${detailSection('Lineage', [
+        editableDetailItem('Parent Sample ID', textControl('sample-edit-parent-sample-id', sample.parent_sample_id)),
+        detailItem('Child Sample IDs', childSampleChips(children), { html: true }),
+        detailItem('Deleted at', sample.deleted_at),
+      ].join(''))}
+
+      <section class="detail-panel detail-notes-panel">
+        <h3>Notes</h3>
+        <textarea id="sample-edit-notes" class="detail-notes-edit">${escapeHtml(sample.notes || '')}</textarea>
       </section>
     </form>
+
+    <section class="detail-panel detail-history-panel">
+      <h3>History</h3>
+      <table id="sample-detail-history-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Action</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${events.map(event => `
+            <tr>
+              <td>${escapeHtml(event.created_at)}</td>
+              <td>${escapeHtml(event.action)}</td>
+              <td>${escapeHtml(formatDetails(event.details_json))}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </section>
   `;
 }
 
@@ -357,17 +393,15 @@ function saveSampleEdit() {
   openSampleModal(rowId, 'view');
 }
 
-function textInput(label, id, value, { required = false, maxlength = '' } = {}) {
+function textControl(id, value, { required = false, maxlength = '' } = {}) {
   return `
-    <label>${escapeHtml(label)}
-      <input
-        type="text"
-        id="${escapeHtml(id)}"
-        value="${escapeHtml(value || '')}"
-        ${required ? 'required=""' : ''}
-        ${maxlength ? `maxlength="${escapeHtml(maxlength)}"` : ''}
-      >
-    </label>
+    <input
+      type="text"
+      id="${escapeHtml(id)}"
+      value="${escapeHtml(value || '')}"
+      ${required ? 'required=""' : ''}
+      ${maxlength ? `maxlength="${escapeHtml(maxlength)}"` : ''}
+    >
   `;
 }
 
@@ -376,16 +410,14 @@ function sampleTypeSelect(value) {
   if (value) values.add(value);
 
   return `
-    <label>Sample Type
-      <select id="sample-edit-sample-type">
-        <option value="">(select)</option>
-        ${Array.from(values).map(type => `
-          <option value="${escapeHtml(type)}" ${type === value ? 'selected' : ''}>
-            ${escapeHtml(type)}
-          </option>
-        `).join('')}
-      </select>
-    </label>
+    <select id="sample-edit-sample-type">
+      <option value="">(select)</option>
+      ${Array.from(values).map(type => `
+        <option value="${escapeHtml(type)}" ${type === value ? 'selected' : ''}>
+          ${escapeHtml(type)}
+        </option>
+      `).join('')}
+    </select>
   `;
 }
 
@@ -404,15 +436,13 @@ function statusSelect(value) {
   if (!statuses.includes(current)) statuses.push(current);
 
   return `
-    <label>Status
-      <select id="sample-edit-status">
-        ${statuses.map(status => `
-          <option value="${escapeHtml(status)}" ${status === current ? 'selected' : ''}>
-            ${escapeHtml(status)}
-          </option>
-        `).join('')}
-      </select>
-    </label>
+    <select id="sample-edit-status">
+      ${statuses.map(status => `
+        <option value="${escapeHtml(status)}" ${status === current ? 'selected' : ''}>
+          ${escapeHtml(status)}
+        </option>
+      `).join('')}
+    </select>
   `;
 }
 
@@ -422,15 +452,13 @@ function temperatureSelect(value) {
   if (current && !options.includes(current)) options.push(current);
 
   return `
-    <label>Storage Temperature
-      <select id="sample-edit-storage-temperature">
-        ${options.map(option => `
-          <option value="${escapeHtml(option)}" ${option === current ? 'selected' : ''}>
-            ${escapeHtml(option)}
-          </option>
-        `).join('')}
-      </select>
-    </label>
+    <select id="sample-edit-storage-temperature">
+      ${options.map(option => `
+        <option value="${escapeHtml(option)}" ${option === current ? 'selected' : ''}>
+          ${escapeHtml(option)}
+        </option>
+      `).join('')}
+    </select>
   `;
 }
 
@@ -447,6 +475,20 @@ function detailItem(label, value, { html = false } = {}) {
       <strong>${displayValue}</strong>
     </div>
   `;
+}
+
+function editableDetailItem(label, controlHtml) {
+  return `
+    <div class="detail-item detail-item-editing">
+      <label for="${extractControlId(controlHtml)}" class="small">${escapeHtml(label)}</label>
+      ${controlHtml}
+    </div>
+  `;
+}
+
+function extractControlId(controlHtml) {
+  const match = String(controlHtml).match(/\sid="([^"]+)"/);
+  return match ? escapeHtml(match[1]) : '';
 }
 
 function detailSection(title, content) {
