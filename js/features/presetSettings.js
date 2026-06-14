@@ -9,9 +9,11 @@ import {
   setSecondaryDefaultProcessing,
   resetPresetSettings,
 } from '../db/sampleTypes.js';
+import { queryAll } from '../db/query.js';
 
 export function bindPresetSettingsEvents({
   refreshSampleTypeSelect,
+  makeDbDirty,
 } = {}) {
   renderPresetSettings();
 
@@ -22,7 +24,10 @@ export function bindPresetSettingsEvents({
       if (typeof refreshSampleTypeSelect === 'function') {
         refreshSampleTypeSelect();
       }
-      alert('Preset settings saved in this browser.');
+      if (typeof makeDbDirty === 'function') {
+        makeDbDirty();
+      }
+      alert('Preset settings saved in this database.');
     });
   }
 
@@ -35,8 +40,15 @@ export function bindPresetSettingsEvents({
       if (typeof refreshSampleTypeSelect === 'function') {
         refreshSampleTypeSelect();
       }
+      if (typeof makeDbDirty === 'function') {
+        makeDbDirty();
+      }
     });
   }
+}
+
+export function refreshPresetSettingsPanel() {
+  renderPresetSettings();
 }
 
 function renderPresetSettings() {
@@ -63,6 +75,10 @@ function savePresetSettings() {
       return false;
     }
 
+    if (!confirmRemovedActiveSampleTypes(sampleTypes)) {
+      return false;
+    }
+
     setDataEntrySampleTypes(sampleTypes);
     setSecondarySamplePresets(secondaryPresets);
     setSecondaryTypeShort(typeShort);
@@ -73,6 +89,33 @@ function savePresetSettings() {
     alert(err.message || String(err));
     return false;
   }
+}
+
+function confirmRemovedActiveSampleTypes(nextSampleTypes) {
+  const previous = getDataEntrySampleTypes();
+  const nextKeys = new Set(nextSampleTypes.map(type => type.toLowerCase()));
+  const removed = previous.filter(type => !nextKeys.has(type.toLowerCase()));
+  if (removed.length === 0) return true;
+
+  const placeholders = removed.map(() => '?').join(',');
+  const rows = queryAll(`
+    SELECT sample_type, COUNT(*) AS count
+    FROM samples
+    WHERE sample_type IN (${placeholders})
+      AND (status IS NULL OR LOWER(status) NOT IN ('archived','retired','discarded','consumed','deleted'))
+    GROUP BY sample_type
+    ORDER BY sample_type ASC;
+  `, removed);
+
+  if (rows.length === 0) return true;
+
+  const detail = rows
+    .map(row => `${row.sample_type}: ${row.count} active sample(s)`)
+    .join('\n');
+
+  return confirm(
+    `Some removed sample type presets are still used by active samples:\n\n${detail}\n\nRemove these presets anyway? Existing samples will keep their current sample_type values.`
+  );
 }
 
 function parseLines(value) {

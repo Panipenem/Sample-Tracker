@@ -127,6 +127,7 @@ function renderDetail(sample) {
   const body = document.getElementById('sample-detail-body');
   if (!body) return;
 
+  const parent = getParentSample(sample.parent_sample_id);
   const children = queryAll(`
     SELECT DISTINCT sample_id, status
     FROM samples
@@ -145,6 +146,7 @@ function renderDetail(sample) {
     <div class="detail-layout">
       ${detailSection('Overview', [
         detailItem('Date', sample.date),
+        detailItem('Exp label', sample.experiment_label),
         detailItem('Project', sample.project),
         detailItem('Species / Genotype', sample.species_genotype),
         detailItem('Model', sample.model),
@@ -162,7 +164,7 @@ function renderDetail(sample) {
       ].join(''))}
 
       ${detailSection('Lineage', [
-        detailItem('Parent Sample ID', sample.parent_sample_id),
+        detailItem('Parent Sample ID', lineageSampleChip(parent, sample.parent_sample_id), { html: true }),
         detailItem('Child Sample IDs', childSampleChips(children), { html: true }),
         detailItem('Deleted at', sample.deleted_at),
       ].join(''))}
@@ -201,6 +203,7 @@ function renderEdit(sample) {
   const body = document.getElementById('sample-detail-body');
   if (!body) return;
 
+  const parent = getParentSample(sample.parent_sample_id);
   const children = queryAll(`
     SELECT DISTINCT sample_id, status
     FROM samples
@@ -221,6 +224,7 @@ function renderEdit(sample) {
 
       ${detailSection('Overview', [
         editableDetailItem('Date', textControl('sample-edit-date', sample.date, { maxlength: 8 })),
+        editableDetailItem('Exp label', textControl('sample-edit-experiment-label', sample.experiment_label)),
         editableDetailItem('Project', textControl('sample-edit-project', sample.project)),
         editableDetailItem('Species / Genotype', textControl('sample-edit-species-genotype', sample.species_genotype)),
         editableDetailItem('Model', textControl('sample-edit-model', sample.model)),
@@ -241,6 +245,7 @@ function renderEdit(sample) {
 
       ${detailSection('Lineage', [
         editableDetailItem('Parent Sample ID', textControl('sample-edit-parent-sample-id', sample.parent_sample_id)),
+        detailItem('Current parent status', lineageSampleChip(parent, sample.parent_sample_id), { html: true }),
         detailItem('Child Sample IDs', childSampleChips(children), { html: true }),
         detailItem('Deleted at', sample.deleted_at),
       ].join(''))}
@@ -431,14 +436,15 @@ function statusSelect(value) {
   const statuses = [
     'available',
     'low',
-    'low volume',
     'retired',
-    'archived',
     'consumed',
     'discarded',
     'deleted',
   ];
-  const current = value || 'available';
+  let current = value || 'available';
+  if (current === 'archived') {
+    current = 'retired';
+  }
   if (!statuses.includes(current)) statuses.push(current);
 
   return `
@@ -546,13 +552,31 @@ function childSampleChips(children) {
   if (!children || children.length === 0) return '';
 
   return children
-    .map(child => `
-      <span class="detail-chip">
-        ${escapeHtml(child.sample_id)}
-        ${child.status ? `<span>${escapeHtml(child.status)}</span>` : ''}
-      </span>
-    `)
+    .map(child => lineageSampleChip(child, child.sample_id))
     .join('');
+}
+
+function getParentSample(parentSampleId) {
+  if (!parentSampleId) return null;
+
+  return queryAll(`
+    SELECT sample_id, status
+    FROM samples
+    WHERE sample_id = ?
+    LIMIT 1;
+  `, [parentSampleId])[0] || null;
+}
+
+function lineageSampleChip(sample, fallbackSampleId = '') {
+  const sampleId = sample?.sample_id || fallbackSampleId;
+  if (!sampleId) return '';
+
+  return `
+    <span class="detail-chip">
+      ${escapeHtml(sampleId)}
+      ${statusTag(sample?.status || '')}
+    </span>
+  `;
 }
 
 function statusTag(status) {

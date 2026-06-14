@@ -9,11 +9,11 @@
   <meta http-equiv="Expires" content="0">
   
   
-  <link rel="stylesheet" href="./css/base.css?v=preset-settings">
-  <link rel="stylesheet" href="./css/layout.css?v=preset-settings">
-  <link rel="stylesheet" href="./css/table.css?v=preset-settings">
-  <link rel="stylesheet" href="./css/modal.css?v=preset-settings">
-  <link rel="stylesheet" href="./css/components.css?v=preset-settings">
+  <link rel="stylesheet" href="./css/base.css?v=workflow-refinements">
+  <link rel="stylesheet" href="./css/layout.css?v=workflow-refinements">
+  <link rel="stylesheet" href="./css/table.css?v=workflow-refinements">
+  <link rel="stylesheet" href="./css/modal.css?v=workflow-refinements">
+  <link rel="stylesheet" href="./css/components.css?v=workflow-refinements">
 
 
 </head>
@@ -460,7 +460,7 @@
 
     <div class="settings-panel hidden" id="settings-panel-presets">
       <h3>Preset settings</h3>
-      <div class="small">These settings are saved in this browser and used by Data Entry and Secondary Sample Wizard.</div>
+      <div class="small">These settings are saved in the SQLite database, so they follow the database across devices. Existing sample records keep their current values.</div>
 
       <div class="preset-settings-grid">
         <label>Data Entry sample types
@@ -586,6 +586,11 @@
             <div style="flex:1; min-width:160px;">
                 <label>Project
                 <input type="text" id="batch-project">
+                </label>
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label>Exp label
+                <input type="text" id="batch-experiment-label" placeholder="(no change)">
                 </label>
             </div>
             <div style="flex:1; min-width:160px;">
@@ -714,6 +719,6 @@
 
 <script src="sql-wasm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="./js/main.js?v=preset-settings"></script>
+<script type="module" src="./js/main.js?v=workflow-refinements"></script>
 
 </body></html>

@@ -143,6 +143,7 @@ import {
 
 import {
   bindPresetSettingsEvents,
+  refreshPresetSettingsPanel,
 } from './features/presetSettings.js';
 
 
@@ -166,6 +167,8 @@ import {
     renderAuditLog();
     renderDataQuality();
     renderBoxes();
+    initSampleTypeSelect();
+    refreshPresetSettingsPanel();
   }
 
   function renderSamples() {
@@ -233,6 +236,7 @@ import {
 
   bindPresetSettingsEvents({
     refreshSampleTypeSelect: initSampleTypeSelect,
+    makeDbDirty,
   });
 
   bindDbControlEvents({

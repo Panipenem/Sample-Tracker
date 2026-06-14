@@ -52,6 +52,12 @@ export function initSchema() {
         // 已经有该列时会报错，忽略即可
     }
 
+    appState.db.run(`
+      UPDATE samples
+      SET status = 'retired'
+      WHERE LOWER(COALESCE(status, '')) = 'archived';
+    `);
+
     // 兼容旧数据：早期 Secondary wizard 曾把 parent_sample_id 写成 parent row id。
     // 这里仅在没有同名 sample_id 时，将可匹配的 row id 转为真正的 parent sample_id。
     appState.db.run(`

@@ -13,7 +13,7 @@
 }
 
 #samples-table {
-  min-width: 1440px;
+  min-width: 1680px;
 }
 
 #archived-table,
@@ -22,7 +22,7 @@
 }
 
 #archived-table {
-  min-width: 1500px;
+  min-width: 1680px;
 }
 
 #audit-table,
@@ -109,9 +109,9 @@
 
 #samples-table th:last-child,
 #samples-table td:last-child {
-  width: 170px;
-  min-width: 170px;
-  max-width: 170px;
+  width: 190px;
+  min-width: 190px;
+  max-width: 190px;
 }
 
 #deleted-table th:last-child,
@@ -123,9 +123,9 @@
 
 #archived-table th:last-child,
 #archived-table td:last-child {
-  width: 170px;
-  min-width: 170px;
-  max-width: 170px;
+  width: 190px;
+  min-width: 190px;
+  max-width: 190px;
 }
 
 .row-actions {

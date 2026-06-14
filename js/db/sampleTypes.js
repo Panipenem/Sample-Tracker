@@ -1,3 +1,6 @@
+import { appState } from '../state.js';
+import { getMeta, setMeta } from './meta.js';
+
 const DATA_ENTRY_SAMPLE_TYPES_KEY = 'LIMS_DATA_ENTRY_SAMPLE_TYPES';
 const SECONDARY_SAMPLE_PRESETS_KEY = 'LIMS_SECONDARY_SAMPLE_PRESETS';
 const SECONDARY_TYPE_SHORT_KEY = 'LIMS_SECONDARY_TYPE_SHORT';
@@ -59,7 +62,7 @@ export function getDataEntrySampleTypes() {
 }
 
 export function setDataEntrySampleTypes(values) {
-  localStorage.setItem(DATA_ENTRY_SAMPLE_TYPES_KEY, JSON.stringify(cleanStringList(values)));
+  writeSetting(DATA_ENTRY_SAMPLE_TYPES_KEY, cleanStringList(values));
 }
 
 export function getSecondarySamplePresets() {
@@ -67,7 +70,7 @@ export function getSecondarySamplePresets() {
 }
 
 export function setSecondarySamplePresets(values) {
-  localStorage.setItem(SECONDARY_SAMPLE_PRESETS_KEY, JSON.stringify(cleanStringList(values)));
+  writeSetting(SECONDARY_SAMPLE_PRESETS_KEY, cleanStringList(values));
 }
 
 export function getSecondaryTypeShort() {
@@ -75,7 +78,7 @@ export function getSecondaryTypeShort() {
 }
 
 export function setSecondaryTypeShort(value) {
-  localStorage.setItem(SECONDARY_TYPE_SHORT_KEY, JSON.stringify(value || {}));
+  writeSetting(SECONDARY_TYPE_SHORT_KEY, value || {});
 }
 
 export function getSecondaryDefaultProcessing() {
@@ -83,21 +86,19 @@ export function getSecondaryDefaultProcessing() {
 }
 
 export function setSecondaryDefaultProcessing(value) {
-  localStorage.setItem(SECONDARY_DEFAULT_PROCESSING_KEY, JSON.stringify(value || {}));
+  writeSetting(SECONDARY_DEFAULT_PROCESSING_KEY, value || {});
 }
 
 export function resetPresetSettings() {
-  [
-    DATA_ENTRY_SAMPLE_TYPES_KEY,
-    SECONDARY_SAMPLE_PRESETS_KEY,
-    SECONDARY_TYPE_SHORT_KEY,
-    SECONDARY_DEFAULT_PROCESSING_KEY,
-  ].forEach(key => localStorage.removeItem(key));
+  writeSetting(DATA_ENTRY_SAMPLE_TYPES_KEY, DEFAULT_DATA_ENTRY_SAMPLE_TYPES);
+  writeSetting(SECONDARY_SAMPLE_PRESETS_KEY, DEFAULT_SECONDARY_SAMPLE_PRESETS);
+  writeSetting(SECONDARY_TYPE_SHORT_KEY, DEFAULT_SECONDARY_TYPE_SHORT);
+  writeSetting(SECONDARY_DEFAULT_PROCESSING_KEY, DEFAULT_SECONDARY_DEFAULT_PROCESSING);
 }
 
 function readStringList(key, fallback) {
   try {
-    const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+    const parsed = readSetting(key);
     if (Array.isArray(parsed)) {
       const cleaned = cleanStringList(parsed);
       if (cleaned.length > 0) return cleaned;
@@ -111,7 +112,7 @@ function readStringList(key, fallback) {
 
 function readObject(key, fallback) {
   try {
-    const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+    const parsed = readSetting(key);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       return parsed;
     }
@@ -120,6 +121,21 @@ function readObject(key, fallback) {
   }
 
   return { ...fallback };
+}
+
+function readSetting(key) {
+  const dbValue = appState.db ? getMeta(key, null) : null;
+  const raw = dbValue ?? localStorage.getItem(key);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function writeSetting(key, value) {
+  const json = JSON.stringify(value);
+  localStorage.setItem(key, json);
+
+  if (appState.db) {
+    setMeta(key, json);
+  }
 }
 
 function cleanStringList(values) {

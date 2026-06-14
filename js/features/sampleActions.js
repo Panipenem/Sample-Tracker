@@ -30,7 +30,7 @@ function bindArchiveSelectedButton({ makeDbDirty, refreshAllViews } = {}) {
       return;
     }
 
-    if (!confirm(`Archive ${checked.length} selected samples?`)) return;
+    if (!confirm(`Retire ${checked.length} selected samples? They will move to the Archived tab.`)) return;
 
     withTransaction(() => {
       const stmt = appState.db.prepare(
@@ -41,12 +41,12 @@ function bindArchiveSelectedButton({ makeDbDirty, refreshAllViews } = {}) {
         checked.forEach(cb => {
           const id = parseInt(cb.getAttribute('data-id'), 10);
           const sample = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [id])[0] || {};
-          stmt.run(['archived', id]);
+          stmt.run(['retired', id]);
           recordSampleEvent({
             sampleRowId: id,
             sampleId: sample.sample_id,
-            action: 'archive',
-            details: { source: 'bulk_action' },
+            action: 'retire',
+            details: { source: 'bulk_action', previous_action: 'archive' },
           });
         });
       } finally {

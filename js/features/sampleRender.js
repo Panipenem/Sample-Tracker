@@ -467,7 +467,7 @@ function bindRowActionButtons({
       const sid = btn.getAttribute('data-sample-id') || '';
       const label = sid ? `sample ${sid}` : `ID ${id}`;
 
-      if (!confirm(`Archive ${label}? It will be moved to the Archived tab.`)) {
+      if (!confirm(`Retire ${label}? It will be moved to the Archived tab.`)) {
         return;
       }
 
@@ -479,7 +479,7 @@ function bindRowActionButtons({
         );
 
         try {
-          stmt.run(['archived', id]);
+          stmt.run(['retired', id]);
         } finally {
           stmt.free();
         }
@@ -487,8 +487,8 @@ function bindRowActionButtons({
         recordSampleEvent({
           sampleRowId: id,
           sampleId: sid,
-          action: 'archive',
-          details: { source: 'row_button' },
+          action: 'retire',
+          details: { source: 'row_button', previous_action: 'archive' },
         });
       });
 

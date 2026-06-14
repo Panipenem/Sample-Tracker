@@ -52,6 +52,7 @@ function bindOpenBatchEdit(batchBackdrop, { refreshFreezerMenus } = {}) {
 
     [
       'batch-project',
+      'batch-experiment-label',
       'batch-notes',
       'batch-processing',
       'batch-storage-temperature',
@@ -137,6 +138,7 @@ function bindApplyBatchEdit(
     }
 
     const projValRaw = (document.getElementById('batch-project').value || '').trim();
+    const experimentLabelRaw = (document.getElementById('batch-experiment-label').value || '').trim();
     const notesValRaw = (document.getElementById('batch-notes').value || '').trim();
     const procValRaw = (document.getElementById('batch-processing').value || '').trim();
     const statusRaw = document.getElementById('batch-status').value || '';
@@ -152,6 +154,7 @@ function bindApplyBatchEdit(
     const typeRaw = (document.getElementById('batch-sample-type').value || '').trim();
 
     const projVal = projValRaw || null;
+    const experimentLabelVal = experimentLabelRaw || null;
     const notesVal = notesValRaw || null;
     const procVal = procValRaw || null;
     const statusVal = statusRaw || null;
@@ -161,7 +164,7 @@ function bindApplyBatchEdit(
     const typeVal = typeRaw || null;
 
     const hasAnyChange =
-      projVal || notesVal || procVal || statusVal ||
+      projVal || experimentLabelVal || notesVal || procVal || statusVal ||
       tempRaw || freezerRaw || rackRaw || boxLabelRaw ||
       speciesVal || modelVal || tissueVal || typeVal;
 
@@ -177,6 +180,7 @@ function bindApplyBatchEdit(
         const stmt = appState.db.prepare(`
           UPDATE samples SET
               project          = COALESCE(?, project),
+              experiment_label = COALESCE(?, experiment_label),
               notes            = COALESCE(?, notes),
               processing       = COALESCE(?, processing),
               status           = COALESCE(?, status),
@@ -184,6 +188,7 @@ function bindApplyBatchEdit(
               model            = COALESCE(?, model),
               tissue           = COALESCE(?, tissue),
               sample_type      = COALESCE(?, sample_type),
+              box_id           = COALESCE(?, box_id),
               updated_at       = datetime('now')
           WHERE id = ?;
         `);
@@ -192,10 +197,60 @@ function bindApplyBatchEdit(
           checked.forEach(cb => {
             const id = parseInt(cb.getAttribute('data-id'), 10);
             if (!Number.isFinite(id)) return;
-            const sample = queryAll('SELECT sample_id FROM samples WHERE id = ? LIMIT 1;', [id])[0] || {};
+            const sample = queryAll(`
+              SELECT s.*,
+                     b.storage_temperature,
+                     b.freezer_no,
+                     b.rack,
+                     b.box_label
+              FROM samples s
+              LEFT JOIN boxes b ON s.box_id = b.id
+              WHERE s.id = ?
+              LIMIT 1;
+            `, [id])[0] || {};
+            if (!sample.id) return;
+
+            let boxId = null;
+            const nextStorage = {
+              storage_temperature: sample.storage_temperature || '',
+              freezer_no: sample.freezer_no || '',
+              rack: sample.rack || '',
+              box_label: sample.box_label || '',
+            };
+
+            if (wantStoragePatch) {
+              nextStorage.storage_temperature = tempRaw || nextStorage.storage_temperature;
+              nextStorage.freezer_no = freezerRaw || nextStorage.freezer_no;
+              nextStorage.rack = rackRaw || nextStorage.rack;
+              nextStorage.box_label = boxLabelRaw || nextStorage.box_label;
+
+              if (
+                nextStorage.storage_temperature ||
+                nextStorage.freezer_no ||
+                nextStorage.rack ||
+                nextStorage.box_label
+              ) {
+                boxId = getOrCreateBoxId(nextStorage);
+              }
+            }
+
+            const next = {
+              ...sample,
+              project: projVal ?? sample.project,
+              experiment_label: experimentLabelVal ?? sample.experiment_label,
+              notes: notesVal ?? sample.notes,
+              processing: procVal ?? sample.processing,
+              status: statusVal ?? sample.status,
+              species_genotype: speciesVal ?? sample.species_genotype,
+              model: modelVal ?? sample.model,
+              tissue: tissueVal ?? sample.tissue,
+              sample_type: typeVal ?? sample.sample_type,
+              ...nextStorage,
+            };
 
             stmt.run([
               projVal,
+              experimentLabelVal,
               notesVal,
               procVal,
               statusVal,
@@ -203,8 +258,12 @@ function bindApplyBatchEdit(
               modelVal,
               tissueVal,
               typeVal,
+              boxId,
               id,
             ]);
+
+            const changes = buildBatchChanges(sample, next);
+            if (Object.keys(changes).length === 0) return;
 
             recordSampleEvent({
               sampleRowId: id,
@@ -212,77 +271,12 @@ function bindApplyBatchEdit(
               action: 'batch_edit',
               details: {
                 source: 'batch_edit_modal',
-                fields: {
-                  ...(projVal ? { project: projVal } : {}),
-                  ...(notesVal ? { notes: notesVal } : {}),
-                  ...(procVal ? { processing: procVal } : {}),
-                  ...(statusVal ? { status: statusVal } : {}),
-                  ...(speciesVal ? { species_genotype: speciesVal } : {}),
-                  ...(modelVal ? { model: modelVal } : {}),
-                  ...(tissueVal ? { tissue: tissueVal } : {}),
-                  ...(typeVal ? { sample_type: typeVal } : {}),
-                  ...(wantStoragePatch
-                    ? {
-                        storage: {
-                          storage_temperature: tempRaw || '(keep)',
-                          freezer_no: freezerRaw || '(keep)',
-                          rack: rackRaw || '(keep)',
-                          box_label: boxLabelRaw || '(keep)',
-                        },
-                      }
-                    : {}),
-                },
+                changes,
               },
             });
           });
         } finally {
           stmt.free();
-        }
-
-        if (!wantStoragePatch) return;
-
-        const updBox = appState.db.prepare(`
-          UPDATE samples
-          SET box_id = ?, updated_at = datetime('now')
-          WHERE id = ?;
-        `);
-
-        try {
-          checked.forEach(cb => {
-            const id = parseInt(cb.getAttribute('data-id'), 10);
-            if (!Number.isFinite(id)) return;
-
-            const cur = queryAll(`
-              SELECT b.storage_temperature, b.freezer_no, b.rack, b.box_label
-              FROM samples s
-              LEFT JOIN boxes b ON s.box_id = b.id
-              WHERE s.id = ?
-              LIMIT 1;
-            `, [id])[0] || {};
-
-            const curTemp = (cur.storage_temperature || '').trim();
-            const curFreezer = (cur.freezer_no || '').trim();
-            const curRack = (cur.rack || '').trim();
-            const curLabel = (cur.box_label || '').trim();
-
-            const newTemp = tempRaw || curTemp;
-            const newFreezer = freezerRaw || curFreezer;
-            const newRack = rackRaw || curRack;
-            const newLabel = boxLabelRaw || curLabel;
-
-            if (!(newTemp || newFreezer || newRack || newLabel)) return;
-
-            const boxId = getOrCreateBoxId({
-              storage_temperature: newTemp,
-              freezer_no: newFreezer,
-              rack: newRack,
-              box_label: newLabel,
-            });
-
-            updBox.run([boxId, id]);
-          });
-        } finally {
-          updBox.free();
         }
       });
     } catch (err) {
@@ -301,4 +295,36 @@ function bindApplyBatchEdit(
       refreshAllViews();
     }
   });
+}
+
+function buildBatchChanges(previous, next) {
+  const fields = [
+    'project',
+    'experiment_label',
+    'notes',
+    'processing',
+    'status',
+    'species_genotype',
+    'model',
+    'tissue',
+    'sample_type',
+    'storage_temperature',
+    'freezer_no',
+    'rack',
+    'box_label',
+  ];
+  const changes = {};
+
+  fields.forEach(field => {
+    const before = normalizeAuditValue(previous[field]);
+    const after = normalizeAuditValue(next[field]);
+    if (before === after) return;
+    changes[field] = { from: before, to: after };
+  });
+
+  return changes;
+}
+
+function normalizeAuditValue(value) {
+  return value == null ? '' : String(value);
 }

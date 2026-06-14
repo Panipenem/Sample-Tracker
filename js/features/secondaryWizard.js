@@ -446,6 +446,9 @@ function bindWizardStepEvents({ refreshAllViews, makeDbDirty } = {}) {
       }
 
       const today = getTodayYMD();
+      const retireParents = confirm(
+        'Retire selected parent sample(s) after generating secondary samples?'
+      );
 
       try {
         withTransaction(() => {
@@ -504,6 +507,41 @@ function bindWizardStepEvents({ refreshAllViews, makeDbDirty } = {}) {
             });
           } finally {
             insertStmt.free();
+          }
+
+          if (retireParents) {
+            const retireStmt = appState.db.prepare(`
+              UPDATE samples
+              SET status = 'retired',
+                  deleted_at = NULL,
+                  updated_at = datetime('now')
+              WHERE id = ?;
+            `);
+
+            try {
+              wizardPrimaryIds.forEach(pid => {
+                const row = queryAll('SELECT id, sample_id, status FROM samples WHERE id = ? LIMIT 1;', [pid])[0];
+                if (!row) return;
+                retireStmt.run([pid]);
+                recordSampleEvent({
+                  sampleRowId: row.id,
+                  sampleId: row.sample_id,
+                  action: 'retire',
+                  details: {
+                    source: 'secondary_wizard',
+                    reason: 'generated_secondary_samples',
+                    changes: {
+                      status: {
+                        from: row.status || '',
+                        to: 'retired',
+                      },
+                    },
+                  },
+                });
+              });
+            } finally {
+              retireStmt.free();
+            }
           }
         });
 

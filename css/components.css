@@ -347,9 +347,13 @@
   font-weight: 600;
 }
 
-.detail-chip span {
+.detail-chip > span:not(.tag) {
   color: #6b7280;
   font-weight: 500;
+}
+
+.detail-chip .tag {
+  margin-left: 2px;
 }
 
 @media (max-width: 760px) {

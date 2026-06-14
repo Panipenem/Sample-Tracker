@@ -2,7 +2,6 @@ export const VALID_SAMPLE_STATUSES = new Set([
   'available',
   'low',
   'retired',
-  'archived',
   'discarded',
   'consumed',
   'deleted',
@@ -27,6 +26,7 @@ export function isValidYmdDate(value) {
 export function normalizeSampleStatus(value, fallback = 'available') {
   const status = String(value || '').trim().toLowerCase();
   if (!status) return fallback;
+  if (status === 'archived') return 'retired';
   return VALID_SAMPLE_STATUSES.has(status) ? status : fallback;
 }
 
