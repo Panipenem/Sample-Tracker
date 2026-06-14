@@ -635,7 +635,10 @@ export function renderArchivedSamples() {
       <td>${statusHtml}</td>
       <td>${escapeHtml(storageStr)}</td>
       <td>
-        <button data-id="${id}" class="btn-details btn-secondary">Details</button>
+        <div class="row-actions">
+          <button data-id="${id}" class="btn-details btn-secondary">Details</button>
+          <button data-id="${id}" class="btn-edit btn-secondary">Edit</button>
+        </div>
       </td>
     `;
 

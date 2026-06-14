@@ -114,13 +114,18 @@
   max-width: 170px;
 }
 
-#archived-table th:last-child,
-#archived-table td:last-child,
 #deleted-table th:last-child,
 #deleted-table td:last-child {
   width: 160px;
   min-width: 160px;
   max-width: 160px;
+}
+
+#archived-table th:last-child,
+#archived-table td:last-child {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
 }
 
 .row-actions {
