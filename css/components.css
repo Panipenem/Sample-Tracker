@@ -202,6 +202,38 @@
   max-width: 920px;
 }
 
+.sample-edit-modal {
+  max-width: 920px;
+}
+
+.sample-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sample-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 12px;
+}
+
+.sample-edit-form label {
+  margin: 0;
+  font-size: 12px;
+  color: #374151;
+}
+
+.sample-edit-form input,
+.sample-edit-form select,
+.sample-edit-form textarea {
+  margin-top: 3px;
+}
+
+.sample-edit-form textarea {
+  min-height: 64px;
+}
+
 .sample-detail-modal .wizard-header {
   align-items: flex-start;
   border-bottom: 1px solid var(--border);

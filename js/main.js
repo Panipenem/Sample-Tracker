@@ -96,7 +96,6 @@ import {
   renderSamples as renderSamplesBase,
   renderArchivedSamples,
   renderDeletedSamples,
-  loadSampleToForm as loadSampleToFormBase,
   bindSampleColumnEvents,
 } from './features/sampleRender.js';
 
@@ -116,6 +115,10 @@ import {
 import {
   bindSampleDetailEvents,
 } from './features/sampleDetail.js';
+
+import {
+  bindSampleEditEvents,
+} from './features/sampleEdit.js';
 
 import { 
     bindBatchEditEvents 
@@ -169,13 +172,6 @@ import {
     renderSamplesBase({
         makeDbDirty,
         refreshAllViews,
-        loadSampleToForm,
-    });
-  }
-
-  function loadSampleToForm(id) {
-    loadSampleToFormBase(id, {
-        refreshFreezerMenus,
     });
   }
 
@@ -206,6 +202,11 @@ import {
   });
 
   bindSampleDetailEvents();
+
+  bindSampleEditEvents({
+    makeDbDirty,
+    refreshAllViews,
+  });
 
   bindAuditLogEvents({
     renderAuditLog,

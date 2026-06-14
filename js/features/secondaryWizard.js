@@ -479,7 +479,7 @@ function bindWizardStepEvents({ refreshAllViews, makeDbDirty } = {}) {
                   key,
                   row.notes || '',
                   processing,
-                  row.id,
+                  parentSid,
                   null,
                   row.project || '',
                   'available',

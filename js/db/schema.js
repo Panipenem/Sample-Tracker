@@ -52,6 +52,30 @@ export function initSchema() {
         // 已经有该列时会报错，忽略即可
     }
 
+    // 兼容旧数据：早期 Secondary wizard 曾把 parent_sample_id 写成 parent row id。
+    // 这里仅在没有同名 sample_id 时，将可匹配的 row id 转为真正的 parent sample_id。
+    appState.db.run(`
+      UPDATE samples AS child
+      SET parent_sample_id = (
+        SELECT parent.sample_id
+        FROM samples AS parent
+        WHERE CAST(parent.id AS TEXT) = CAST(child.parent_sample_id AS TEXT)
+        LIMIT 1
+      )
+      WHERE child.parent_sample_id IS NOT NULL
+        AND TRIM(child.parent_sample_id) != ''
+        AND NOT EXISTS (
+          SELECT 1
+          FROM samples AS by_sample_id
+          WHERE by_sample_id.sample_id = child.parent_sample_id
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM samples AS by_row_id
+          WHERE CAST(by_row_id.id AS TEXT) = CAST(child.parent_sample_id AS TEXT)
+        );
+    `);
+
     appState.db.run(`
       CREATE TABLE IF NOT EXISTS meta (
         key   TEXT PRIMARY KEY,

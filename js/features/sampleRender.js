@@ -1,9 +1,7 @@
 import { appState } from '../state.js';
 import { recordSampleEvent } from '../db/audit.js';
 import { queryAll, withTransaction } from '../db/query.js';
-import { ensureSelectHasValue } from '../utils/select.js';
 import { escapeHtml } from '../utils/string.js';
-import { setActiveTab } from './tabs.js';
 
 const PAGE_SIZE = 100;
 const SAMPLE_COLUMN_STORAGE_KEY = 'LIMS_SAMPLE_VISIBLE_COLUMNS';
@@ -185,7 +183,6 @@ function renderPager({
 export function renderSamples({
   makeDbDirty,
   refreshAllViews,
-  loadSampleToForm,
 } = {}) {
   const tbody = document.querySelector('#samples-table tbody');
   if (!tbody) return;
@@ -202,6 +199,7 @@ export function renderSamples({
 
   const searchWhere = buildSearchWhere(search, [
     's.sample_id',
+    's.date',
     's.tissue',
     's.model',
     's.project',
@@ -318,7 +316,6 @@ export function renderSamples({
   bindRowActionButtons({
     makeDbDirty,
     refreshAllViews,
-    loadSampleToForm,
   });
   bindMoreActionMenus();
   applySampleColumnVisibility();
@@ -338,15 +335,15 @@ export function renderSamples({
     total,
     onPrev: () => {
       tableState.samplesPage = Math.max(1, tableState.samplesPage - 1);
-      renderSamples({ makeDbDirty, refreshAllViews, loadSampleToForm });
+      renderSamples({ makeDbDirty, refreshAllViews });
     },
     onNext: () => {
       tableState.samplesPage = Math.min(totalPages, tableState.samplesPage + 1);
-      renderSamples({ makeDbDirty, refreshAllViews, loadSampleToForm });
+      renderSamples({ makeDbDirty, refreshAllViews });
     },
     onPage: page => {
       tableState.samplesPage = page;
-      renderSamples({ makeDbDirty, refreshAllViews, loadSampleToForm });
+      renderSamples({ makeDbDirty, refreshAllViews });
     },
   });
 }
@@ -463,20 +460,7 @@ function bindMoreActionMenus() {
 function bindRowActionButtons({
   makeDbDirty,
   refreshAllViews,
-  loadSampleToForm,
 } = {}) {
-    document.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = parseInt(btn.getAttribute('data-id'), 10);
-
-      if (typeof loadSampleToForm === 'function') {
-        loadSampleToForm(id);
-      }
-
-      setActiveTab('form');
-    });
-  });
-
   document.querySelectorAll('.btn-archive').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = parseInt(btn.getAttribute('data-id'), 10);
@@ -578,6 +562,7 @@ export function renderArchivedSamples() {
 
   const searchWhere = buildSearchWhere(search, [
     's.sample_id',
+    's.date',
     's.tissue',
     's.model',
     's.project',
@@ -696,6 +681,7 @@ export function renderDeletedSamples() {
 
   const searchWhere = buildSearchWhere(search, [
     's.sample_id',
+    's.date',
     's.tissue',
     's.model',
     's.project',
@@ -780,49 +766,4 @@ export function renderDeletedSamples() {
       renderDeletedSamples();
     },
   });
-}
-
-export function loadSampleToForm(id, { refreshFreezerMenus } = {}) {
-  if (!appState.db) return;
-
-  const rows = queryAll(
-    `
-    SELECT s.*, b.storage_temperature, b.freezer_no, b.rack, b.box_label
-    FROM samples s
-    LEFT JOIN boxes b ON s.box_id = b.id
-    WHERE s.id = ?
-    LIMIT 1;
-    `,
-    [id]
-  );
-
-  if (rows.length === 0) return;
-
-  const s = rows[0];
-
-  document.getElementById('internal_sample_row_id').value = s.id;
-  document.getElementById('sample_id').value = s.sample_id || '';
-  document.getElementById('date').value = s.date || '';
-  document.getElementById('experiment_label').value = s.experiment_label || '';
-  document.getElementById('species_genotype').value = s.species_genotype || '';
-  document.getElementById('model').value = s.model || '';
-  document.getElementById('tissue').value = s.tissue || '';
-  const sampleTypeSelect = document.getElementById('sample_type');
-  ensureSelectHasValue(sampleTypeSelect, s.sample_type || '');
-  document.getElementById('notes').value = s.notes || '';
-  document.getElementById('processing').value = s.processing || '';
-  document.getElementById('parent_sample_id').value = s.parent_sample_id || '';
-  document.getElementById('amount').value = s.amount || '';
-  document.getElementById('project').value = s.project || '';
-  document.getElementById('status').value = s.status || 'available';
-  document.getElementById('storage_temperature').value =
-    s.storage_temperature || '';
-
-  if (typeof refreshFreezerMenus === 'function') {
-    refreshFreezerMenus();
-  }
-
-  document.getElementById('freezer_no').value = s.freezer_no || '';
-  document.getElementById('rack').value = s.rack || '';
-  document.getElementById('box_label').value = s.box_label || '';
 }

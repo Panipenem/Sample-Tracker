@@ -42,9 +42,8 @@ function openSampleDetail(id) {
     SELECT DISTINCT sample_id, status
     FROM samples
     WHERE parent_sample_id = ?
-       OR CAST(parent_sample_id AS TEXT) = CAST(? AS TEXT)
     ORDER BY sample_id ASC;
-  `, [sample.sample_id || '', id]);
+  `, [sample.sample_id || '']);
   const events = queryAll(`
     SELECT created_at, action, details_json
     FROM sample_events

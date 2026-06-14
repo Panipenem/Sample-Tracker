@@ -6,11 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   
-  <link rel="stylesheet" href="./css/base.css?v=clean-lab-ui">
-  <link rel="stylesheet" href="./css/layout.css?v=clean-lab-ui">
-  <link rel="stylesheet" href="./css/table.css?v=clean-lab-ui">
-  <link rel="stylesheet" href="./css/modal.css?v=clean-lab-ui">
-  <link rel="stylesheet" href="./css/components.css?v=clean-lab-ui">
+  <link rel="stylesheet" href="./css/base.css?v=edit-modal">
+  <link rel="stylesheet" href="./css/layout.css?v=edit-modal">
+  <link rel="stylesheet" href="./css/table.css?v=edit-modal">
+  <link rel="stylesheet" href="./css/modal.css?v=edit-modal">
+  <link rel="stylesheet" href="./css/components.css?v=edit-modal">
 
 
 </head>
@@ -213,7 +213,7 @@
     <h2>Sample List (active)</h2>
     <div class="sticky-toolbar">
       <div class="flex">
-      <label>Search (Sample ID / tissue / model / project)
+      <label>Search (Sample ID / date / tissue / model / project)
         <input type="text" id="search-input" placeholder="Type to filter...">
       </label>
       <label>Status filter
@@ -285,7 +285,7 @@
     <h2>Archived / Consumed samples</h2>
     <div class="sticky-toolbar">
       <div class="flex">
-        <label>Search (Sample ID / tissue / model / project)
+        <label>Search (Sample ID / date / tissue / model / project)
           <input type="text" id="archived-search-input" placeholder="Type to filter archived samples...">
         </label>
         <div class="toolbar-right-actions">
@@ -371,7 +371,7 @@
       <h3>Deleted samples</h3>
       <div class="sticky-toolbar">
         <div class="flex">
-          <label>Search (Sample ID / tissue / model / project)
+          <label>Search (Sample ID / date / tissue / model / project)
             <input type="text" id="deleted-search-input" placeholder="Type to filter deleted samples...">
           </label>
         </div>
@@ -676,10 +676,107 @@
       <div id="sample-detail-body" class="wizard-step-body"></div>
     </div>
   </div>
+
+  <!-- Sample edit modal -->
+  <div id="sample-edit-backdrop" class="modal-backdrop hidden">
+    <div class="wizard-modal sample-edit-modal">
+      <div class="wizard-header">
+        <div class="wizard-title" id="sample-edit-title">Edit sample</div>
+        <button type="button" id="sample-edit-close" class="wizard-close-btn">×</button>
+      </div>
+      <form id="sample-edit-form" class="sample-edit-form wizard-step-body">
+        <input type="hidden" id="sample-edit-row-id">
+
+        <section class="detail-panel">
+          <h3>Overview</h3>
+          <div class="sample-edit-grid">
+            <label>Sample ID
+              <input type="text" id="sample-edit-sample-id" required="">
+            </label>
+            <label>Date (YYYYMMDD)
+              <input type="text" id="sample-edit-date" maxlength="8">
+            </label>
+            <label>Experiment label
+              <input type="text" id="sample-edit-experiment-label">
+            </label>
+            <label>Species / Genotype
+              <input type="text" id="sample-edit-species-genotype">
+            </label>
+            <label>Model
+              <input type="text" id="sample-edit-model">
+            </label>
+            <label>Tissue
+              <input type="text" id="sample-edit-tissue">
+            </label>
+            <label>Sample Type
+              <select id="sample-edit-sample-type"></select>
+            </label>
+            <label>Processing
+              <input type="text" id="sample-edit-processing">
+            </label>
+            <label>Parent Sample ID
+              <input type="text" id="sample-edit-parent-sample-id">
+            </label>
+            <label>Amount
+              <input type="text" id="sample-edit-amount">
+            </label>
+            <label>Project
+              <input type="text" id="sample-edit-project">
+            </label>
+            <label>Status
+              <select id="sample-edit-status">
+                <option value="available">available</option>
+                <option value="low">low volume</option>
+                <option value="retired">retired</option>
+                <option value="archived">archived</option>
+                <option value="consumed">consumed</option>
+                <option value="discarded">discarded</option>
+                <option value="deleted">deleted</option>
+              </select>
+            </label>
+          </div>
+          <label>Notes
+            <textarea id="sample-edit-notes"></textarea>
+          </label>
+        </section>
+
+        <section class="detail-panel">
+          <h3>Storage</h3>
+          <div class="sample-edit-grid">
+            <label>Storage Temperature
+              <select id="sample-edit-storage-temperature">
+                <option value=""></option>
+                <option value="-80">-80</option>
+                <option value="-40">-40</option>
+                <option value="-20">-20</option>
+                <option value="LN2">LN2</option>
+                <option value="4">4</option>
+                <option value="RT">RT</option>
+              </select>
+            </label>
+            <label>Freezer No.
+              <input type="text" id="sample-edit-freezer-no">
+            </label>
+            <label>Rack
+              <input type="text" id="sample-edit-rack">
+            </label>
+            <label>Box Label
+              <input type="text" id="sample-edit-box-label">
+            </label>
+          </div>
+        </section>
+
+        <div class="wizard-footer">
+          <button type="button" id="sample-edit-cancel" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </main>
 
 <script src="sql-wasm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="./js/main.js?v=clean-lab-ui"></script>
+<script type="module" src="./js/main.js?v=edit-modal"></script>
 
 </body></html>

@@ -60,8 +60,7 @@ function countMissingParents() {
     SELECT COUNT(*) AS c
     FROM samples s
     LEFT JOIN samples p
-      ON CAST(s.parent_sample_id AS TEXT) = CAST(p.id AS TEXT)
-      OR s.parent_sample_id = p.sample_id
+      ON s.parent_sample_id = p.sample_id
     WHERE s.parent_sample_id IS NOT NULL
       AND TRIM(s.parent_sample_id) != ''
       AND p.id IS NULL;
@@ -84,8 +83,7 @@ function missingParentRows() {
     SELECT s.sample_id, s.date, s.project, s.parent_sample_id
     FROM samples s
     LEFT JOIN samples p
-      ON CAST(s.parent_sample_id AS TEXT) = CAST(p.id AS TEXT)
-      OR s.parent_sample_id = p.sample_id
+      ON s.parent_sample_id = p.sample_id
     WHERE s.parent_sample_id IS NOT NULL
       AND TRIM(s.parent_sample_id) != ''
       AND p.id IS NULL
