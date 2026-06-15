@@ -34,6 +34,8 @@ const scanState = {
     rafId: null,
     active: false,
     target: 'sample',
+    frames: 0,
+    lastStatusAt: 0,
   },
 };
 
@@ -745,8 +747,10 @@ async function startCameraScanner(target = 'sample') {
     video.muted = true;
     await video.play();
     scanState.camera.active = true;
+    scanState.camera.frames = 0;
+    scanState.camera.lastStatusAt = Date.now();
     scanCameraFrame(video);
-    const engine = scanState.camera.detector ? '原生识别' : 'jsQR 识别';
+    const engine = scanState.camera.detector ? '原生 + jsQR 识别' : 'jsQR 识别';
     setMessage(`${target === 'sample' ? '样本' : '盒子'}扫码已开启（${engine}）。`, 'ok');
   } catch (err) {
     setMessage(`无法开启相机：${cameraErrorMessage(err)}`, 'error');
@@ -764,6 +768,8 @@ function stopCameraScanner({ silent = false } = {}) {
   scanState.camera.detector = null;
   scanState.camera.canvas = null;
   scanState.camera.context = null;
+  scanState.camera.frames = 0;
+  scanState.camera.lastStatusAt = 0;
   const video = document.getElementById('scan-camera-preview');
   if (video) video.srcObject = null;
   if (!silent) setMessage('相机扫码已停止。', 'ok');
@@ -773,9 +779,10 @@ async function scanCameraFrame(video) {
   if (!scanState.camera.active) return;
 
   try {
-    const value = scanState.camera.detector
-      ? await detectWithBarcodeDetector(video)
-      : detectWithJsQr(video);
+    scanState.camera.frames += 1;
+    updateCameraScanStatus();
+
+    const value = await detectQrValue(video);
 
     if (value) {
       handleCameraResult(value);
@@ -785,6 +792,15 @@ async function scanCameraFrame(video) {
   }
 
   scanState.camera.rafId = requestAnimationFrame(() => scanCameraFrame(video));
+}
+
+async function detectQrValue(video) {
+  if (scanState.camera.detector) {
+    const nativeValue = await detectWithBarcodeDetector(video);
+    if (nativeValue) return nativeValue;
+  }
+
+  return detectWithJsQr(video);
 }
 
 async function detectWithBarcodeDetector(video) {
@@ -809,10 +825,19 @@ function detectWithJsQr(video) {
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   const code = window.jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: 'dontInvert',
+    inversionAttempts: 'attemptBoth',
   });
 
   return code?.data || '';
+}
+
+function updateCameraScanStatus() {
+  const now = Date.now();
+  if (now - scanState.camera.lastStatusAt < 1200) return;
+
+  scanState.camera.lastStatusAt = now;
+  const targetLabel = scanState.camera.target === 'sample' ? 'EP 管' : '盒子';
+  setMessage(`正在识别${targetLabel}二维码，请把二维码放到画面中央并保持 10-20 cm 距离。`, 'ok');
 }
 
 function cameraErrorMessage(err) {
