@@ -15,8 +15,9 @@ final class ScanSessionStore: ObservableObject {
     @Published var events: [ScanEvent] = []
     @Published var message = ""
     @Published var messageKind: MessageKind = .info
+    @Published var toast: ToastMessage?
 
-    enum MessageKind {
+    enum MessageKind: Equatable {
         case info
         case success
         case warning
@@ -108,12 +109,18 @@ final class ScanSessionStore: ObservableObject {
         messageKind = kind
     }
 
+    func clearToast(_ toast: ToastMessage) {
+        guard self.toast == toast else { return }
+        self.toast = nil
+    }
+
     private func addSample(_ rawSampleID: String) {
         let sampleID = rawSampleID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sampleID.isEmpty else { return }
 
         if items.contains(where: { $0.sampleID == sampleID }) {
             show("扫码篮里已经有 \(sampleID)", .warning)
+            showToast("已经扫过", detail: sampleID, kind: .warning)
             return
         }
 
@@ -123,6 +130,11 @@ final class ScanSessionStore: ObservableObject {
             cursorPosition = Position.next(after: position ?? cursorPosition)
         }
         show("已加入 \(sampleID)", .success)
+        showToast("扫码成功", detail: sampleID, kind: .success)
+    }
+
+    private func showToast(_ title: String, detail: String? = nil, kind: MessageKind) {
+        toast = ToastMessage(title: title, detail: detail, kind: kind)
     }
 
     private func resetForActionChange() {

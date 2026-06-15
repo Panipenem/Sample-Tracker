@@ -79,3 +79,10 @@ struct ExportPayload: Codable {
     var app: String
     var events: [ScanEvent]
 }
+
+struct ToastMessage: Identifiable, Equatable {
+    var id = UUID()
+    var title: String
+    var detail: String?
+    var kind: ScanSessionStore.MessageKind
+}
