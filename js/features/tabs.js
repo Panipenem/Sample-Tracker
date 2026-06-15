@@ -4,6 +4,7 @@ const TAB_SECTION_IDS = {
   archived: 'section-archived',
   quality: 'section-quality',
   boxes: 'section-boxes',
+  scan: 'section-scan-workflow',
   settings: 'section-settings',
 };
 

@@ -146,6 +146,11 @@ import {
   refreshPresetSettingsPanel,
 } from './features/presetSettings.js';
 
+import {
+  bindScanWorkflowEvents,
+  renderScanWorkflow,
+} from './features/scanWorkflow.js';
+
 
   // Initialize sql.js
   initSqlJs({ locateFile: file => 'sql-wasm.wasm' }).then(SQLLib => {
@@ -167,6 +172,7 @@ import {
     renderAuditLog();
     renderDataQuality();
     renderBoxes();
+    renderScanWorkflow();
     initSampleTypeSelect();
     refreshPresetSettingsPanel();
   }
@@ -237,6 +243,11 @@ import {
   bindPresetSettingsEvents({
     refreshSampleTypeSelect: initSampleTypeSelect,
     makeDbDirty,
+  });
+
+  bindScanWorkflowEvents({
+    makeDbDirty,
+    refreshAllViews,
   });
 
   bindDbControlEvents({
