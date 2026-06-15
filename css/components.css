@@ -340,6 +340,14 @@
   margin-top: 8px;
 }
 
+.scan-choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .scan-align-bottom {
   align-self: end;
   white-space: nowrap;
@@ -474,7 +482,8 @@
 
   .scan-actions button,
   .scan-mode-card,
-  .scan-align-bottom {
+  .scan-align-bottom,
+  .scan-choice-row button {
     width: 100%;
   }
 

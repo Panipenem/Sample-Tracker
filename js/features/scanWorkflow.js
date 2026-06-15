@@ -29,8 +29,11 @@ const scanState = {
   camera: {
     stream: null,
     detector: null,
+    canvas: null,
+    context: null,
     rafId: null,
     active: false,
+    target: 'sample',
   },
 };
 
@@ -52,7 +55,7 @@ export function bindScanWorkflowEvents({
     if (action === 'clear-basket') clearBasket();
     if (action === 'undo-scan') undoLastScan();
     if (action === 'confirm') confirmScanSession({ makeDbDirty, refreshAllViews });
-    if (action === 'start-camera') startCameraScanner();
+    if (action === 'start-camera') startCameraScanner(event.target.dataset.cameraTarget || 'sample');
     if (action === 'stop-camera') stopCameraScanner();
     if (action === 'go-step') goStep(event.target.dataset.step);
     if (action === 'select-mode') selectMode(event.target.dataset.mode);
@@ -193,6 +196,13 @@ function renderBoxStep(kind) {
       </label>
       <button type="button" class="btn-primary scan-align-bottom" data-scan-action="${action}">载入盒子</button>
     </div>
+    <div class="scan-choice-row">
+      <span class="small">或</span>
+      <button type="button" class="btn-secondary" data-scan-action="start-camera" data-camera-target="${isTarget ? 'target-box' : 'box'}">扫码选择盒子</button>
+      <button type="button" class="btn-secondary" data-scan-action="stop-camera">停止扫码</button>
+    </div>
+    <video id="scan-camera-preview" class="scan-camera-preview" playsinline muted></video>
+    <div class="small" style="margin-top:6px;">手机上请用 HTTPS 线上地址打开；电脑里的 in-app browser 不能调用 iPhone 摄像头。</div>
     ${renderCurrentBox(selectedBox, isTarget ? '目标盒子' : '当前盒子')}
     ${isTarget ? '' : renderCreateBoxDetails()}
     <div class="scan-actions">
@@ -260,10 +270,11 @@ function renderSamplesStep() {
       <label>Sample QR input
         <input type="text" id="scan-sample-input" placeholder="扫 sample_id 后按 Enter" autocomplete="off">
       </label>
-      <button type="button" class="btn-secondary scan-align-bottom" data-scan-action="start-camera">iPhone camera</button>
-      <button type="button" class="btn-secondary scan-align-bottom" data-scan-action="stop-camera">Stop camera</button>
+      <button type="button" class="btn-secondary scan-align-bottom" data-scan-action="start-camera" data-camera-target="sample">扫码 EP 管</button>
+      <button type="button" class="btn-secondary scan-align-bottom" data-scan-action="stop-camera">停止扫码</button>
     </div>
     <video id="scan-camera-preview" class="scan-camera-preview" playsinline muted></video>
+    <div class="small" style="margin-top:6px;">如果手机浏览器不支持连续相机识别，也可以用输入框粘贴/输入 sample_id 后按 Enter。</div>
     <div style="margin-top:10px;">${renderBasket()}</div>
     <div class="scan-actions">
       <button type="button" class="btn-secondary" data-scan-action="go-step" data-step="${backStep}">上一步</button>
@@ -481,9 +492,9 @@ function renderBasket() {
   `;
 }
 
-function loadBoxFromInput() {
+function loadBoxFromInput(rawValue = null) {
   const input = document.getElementById('scan-box-input');
-  const box = findBoxByQr(input?.value || '');
+  const box = findBoxByQr(rawValue ?? input?.value ?? '');
   if (!box) {
     setMessage('没有找到这个盒子。可以展开“新建盒子记录”先创建。', 'error');
     return;
@@ -495,9 +506,9 @@ function loadBoxFromInput() {
   setMessage(`已载入盒子 ${box.box_code || box.box_label || box.id}`, 'ok');
 }
 
-function loadTargetBoxFromInput() {
+function loadTargetBoxFromInput(rawValue = null) {
   const input = document.getElementById('scan-target-box-input');
-  const box = findBoxByQr(input?.value || '');
+  const box = findBoxByQr(rawValue ?? input?.value ?? '');
   if (!box) {
     setMessage('没有找到目标盒子。', 'error');
     return;
@@ -704,32 +715,45 @@ function undoLastScan() {
   focusScanInput();
 }
 
-async function startCameraScanner() {
+async function startCameraScanner(target = 'sample') {
   const video = document.getElementById('scan-camera-preview');
   if (!video) return;
 
-  if (!('BarcodeDetector' in window)) {
-    setMessage('当前浏览器不支持 BarcodeDetector。可以继续使用 iPhone 相机复制结果，或用手动输入框连续扫码。', 'error');
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setMessage('当前页面不能访问相机。请确认是在 iPhone 的 HTTPS 页面打开，并允许相机权限。', 'error');
     return;
   }
 
   try {
-    scanState.camera.detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+    stopCameraScanner({ silent: true });
+    scanState.camera.target = target;
+    scanState.camera.detector = 'BarcodeDetector' in window
+      ? new window.BarcodeDetector({ formats: ['qr_code'] })
+      : null;
+    scanState.camera.canvas = document.createElement('canvas');
+    scanState.camera.context = scanState.camera.canvas.getContext('2d', { willReadFrequently: true });
     scanState.camera.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
       audio: false,
     });
     video.srcObject = scanState.camera.stream;
+    video.setAttribute('playsinline', 'true');
+    video.muted = true;
     await video.play();
     scanState.camera.active = true;
     scanCameraFrame(video);
-    setMessage('相机扫码已开启。', 'ok');
+    const engine = scanState.camera.detector ? '原生识别' : 'jsQR 识别';
+    setMessage(`${target === 'sample' ? '样本' : '盒子'}扫码已开启（${engine}）。`, 'ok');
   } catch (err) {
-    setMessage(`无法开启相机：${err.message || err}`, 'error');
+    setMessage(`无法开启相机：${cameraErrorMessage(err)}`, 'error');
   }
 }
 
-function stopCameraScanner() {
+function stopCameraScanner({ silent = false } = {}) {
   scanState.camera.active = false;
   if (scanState.camera.rafId) cancelAnimationFrame(scanState.camera.rafId);
   if (scanState.camera.stream) {
@@ -737,24 +761,83 @@ function stopCameraScanner() {
   }
   scanState.camera.stream = null;
   scanState.camera.rafId = null;
+  scanState.camera.detector = null;
+  scanState.camera.canvas = null;
+  scanState.camera.context = null;
   const video = document.getElementById('scan-camera-preview');
   if (video) video.srcObject = null;
-  setMessage('相机扫码已停止。', 'ok');
+  if (!silent) setMessage('相机扫码已停止。', 'ok');
 }
 
 async function scanCameraFrame(video) {
-  if (!scanState.camera.active || !scanState.camera.detector) return;
+  if (!scanState.camera.active) return;
 
   try {
-    const codes = await scanState.camera.detector.detect(video);
-    if (codes.length > 0) {
-      handleSampleScan(codes[0].rawValue || '');
+    const value = scanState.camera.detector
+      ? await detectWithBarcodeDetector(video)
+      : detectWithJsQr(video);
+
+    if (value) {
+      handleCameraResult(value);
     }
   } catch (e) {
     // Detection can fail while video metadata is warming up.
   }
 
   scanState.camera.rafId = requestAnimationFrame(() => scanCameraFrame(video));
+}
+
+async function detectWithBarcodeDetector(video) {
+  const codes = await scanState.camera.detector.detect(video);
+  return codes.length > 0 ? codes[0].rawValue || '' : '';
+}
+
+function detectWithJsQr(video) {
+  if (typeof window.jsQR !== 'function') {
+    setMessage('缺少 jsQR 解码库。请刷新页面后重试；如果仍失败，检查网络是否能加载 CDN。', 'error');
+    return '';
+  }
+
+  if (!video.videoWidth || !video.videoHeight || !scanState.camera.context) {
+    return '';
+  }
+
+  const canvas = scanState.camera.canvas;
+  const context = scanState.camera.context;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: 'dontInvert',
+  });
+
+  return code?.data || '';
+}
+
+function cameraErrorMessage(err) {
+  const name = err?.name || '';
+  if (name === 'NotAllowedError') return '相机权限被拒绝，请在浏览器地址栏/设置里允许 Camera。';
+  if (name === 'NotFoundError') return '没有找到可用摄像头。';
+  if (name === 'NotReadableError') return '摄像头正在被其他 App 或页面占用。';
+  if (window.isSecureContext === false) return '当前不是 HTTPS 安全页面，iPhone 浏览器会禁止网页调用相机。';
+  return err?.message || String(err || '未知错误');
+}
+
+function handleCameraResult(rawValue) {
+  if (scanState.camera.target === 'box') {
+    loadBoxFromInput(rawValue);
+    stopCameraScanner({ silent: true });
+    return;
+  }
+
+  if (scanState.camera.target === 'target-box') {
+    loadTargetBoxFromInput(rawValue);
+    stopCameraScanner({ silent: true });
+    return;
+  }
+
+  handleSampleScan(rawValue);
 }
 
 function findBoxByQr(value) {

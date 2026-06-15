@@ -149,7 +149,7 @@ import {
 import {
   bindScanWorkflowEvents,
   renderScanWorkflow,
-} from './features/scanWorkflow.js';
+} from './features/scanWorkflow.js?v=scan-camera';
 
 
   // Initialize sql.js
