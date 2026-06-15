@@ -440,7 +440,7 @@ private struct BasketRow: View {
     }
 }
 
-private struct ToastView: View {
+struct ToastView: View {
     let toast: ToastMessage
 
     var body: some View {
@@ -483,7 +483,7 @@ private struct ToastView: View {
     }
 }
 
-private func color(for kind: ScanSessionStore.MessageKind) -> Color {
+func color(for kind: ScanSessionStore.MessageKind) -> Color {
     switch kind {
     case .info: return .secondary
     case .success: return .green

@@ -5,12 +5,13 @@ import VisionKit
 struct QRScannerSheet: View {
     let target: ScanTarget
     let onCode: (String) -> Void
+    @EnvironmentObject private var store: ScanSessionStore
     @Environment(\.dismiss) private var dismiss
     @State private var lastValue = ""
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
+            ZStack(alignment: .top) {
                 QRScannerView { value in
                     guard value != lastValue else { return }
                     lastValue = value
@@ -21,16 +22,29 @@ struct QRScannerSheet: View {
                 }
                 .ignoresSafeArea()
 
-                VStack(spacing: 8) {
-                    Text(target.title)
-                        .font(.headline)
-                    Text(target == .sample ? "扫到后会自动加入扫码篮，可连续扫多管。" : "扫到盒子二维码后自动返回。")
-                        .font(.caption)
-                        .multilineTextAlignment(.center)
+                VStack(spacing: 10) {
+                    if let toast = store.toast {
+                        ToastView(toast: toast)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+
+                    Spacer()
+
+                    ScannerStatusPanel(target: target, basketCount: store.items.count, recentItems: Array(store.items.suffix(3).reversed()))
                 }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(.ultraThinMaterial)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 10)
+            }
+            .animation(.spring(response: 0.28, dampingFraction: 0.86), value: store.toast?.id)
+            .task(id: store.toast?.id) {
+                guard let toast = store.toast else { return }
+                try? await Task.sleep(for: .seconds(1.8))
+                await MainActor.run {
+                    withAnimation {
+                        store.clearToast(toast)
+                    }
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -38,6 +52,66 @@ struct QRScannerSheet: View {
                 }
             }
         }
+    }
+}
+
+private struct ScannerStatusPanel: View {
+    let target: ScanTarget
+    let basketCount: Int
+    let recentItems: [ScanItem]
+
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(target.title)
+                        .font(.headline)
+                    Text(target == .sample ? "扫到后自动加入扫码篮，可连续扫多管。" : "扫到盒子二维码后自动返回。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if target == .sample {
+                    VStack(spacing: 2) {
+                        Text("\(basketCount)")
+                            .font(.title2.bold())
+                        Text("已扫")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+
+            if target == .sample && !recentItems.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(recentItems) { item in
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text(item.sampleID)
+                                .font(.caption.bold())
+                                .lineLimit(1)
+                            Spacer()
+                            if let position = item.position {
+                                Text(position)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(Color.primary.opacity(0.08))
+        )
     }
 }
 

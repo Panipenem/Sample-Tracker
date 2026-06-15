@@ -1,5 +1,5 @@
 import { appState } from '../state.js';
-import { queryAll, withTransaction } from '../db/query.js';
+import { queryAll, runSql, withTransaction } from '../db/query.js';
 import { getOrCreateBoxId } from '../db/boxes.js';
 import { recordSampleEvent } from '../db/audit.js';
 import { cellToString, parseSeqFromSampleId } from '../utils/string.js';
@@ -9,6 +9,7 @@ export function bindImportExportEvents({ refreshAllViews, makeDbDirty } = {}) {
   bindExportSamplesXlsx();
   bindExportLabelsXlsx();
   bindImportSamples({ refreshAllViews, makeDbDirty });
+  bindImportScanEvents({ refreshAllViews, makeDbDirty });
 }
 
 function bindExportSamplesXlsx() {
@@ -400,6 +401,291 @@ function bindImportSamples({ refreshAllViews, makeDbDirty } = {}) {
 
     reader.readAsArrayBuffer(file);
   });
+}
+
+function bindImportScanEvents({ refreshAllViews, makeDbDirty } = {}) {
+  const btn = document.getElementById('btn-import-scan-events');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    if (!appState.db) {
+      alert('Database not ready.');
+      return;
+    }
+
+    const fileInput = document.getElementById('scan-events-file');
+    const file = fileInput?.files?.[0];
+    if (!file) {
+      alert('请先选择 LIMS Scanner App 导出的 scan_events.json 文件。');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = event => {
+      let payload;
+      try {
+        payload = JSON.parse(String(event.target.result || ''));
+      } catch (err) {
+        alert('JSON 解析失败，请确认文件是 scan_events.json。');
+        return;
+      }
+
+      const events = normalizeScanEventsPayload(payload);
+      if (events.length === 0) {
+        alert('没有找到可导入的 scan events。');
+        return;
+      }
+
+      const precheck = buildScanEventsPrecheck(events);
+      if (!confirm(formatScanEventsPrecheck(precheck))) return;
+
+      let applied = 0;
+      let skippedMissingSample = 0;
+      let skippedInvalid = 0;
+      let otherErrors = 0;
+
+      try {
+        ensureScanEventImportSchema();
+        withTransaction(() => {
+          events.forEach(event => {
+            const sampleId = cellToString(event.sampleID || event.sample_id);
+            const action = cellToString(event.action);
+            if (!sampleId || !action) {
+              skippedInvalid++;
+              return;
+            }
+
+            const sample = queryAll(
+              'SELECT id, sample_id, status FROM samples WHERE sample_id = ? LIMIT 1;',
+              [sampleId]
+            )[0];
+            if (!sample) {
+              skippedMissingSample++;
+              return;
+            }
+
+            try {
+              applyScanEventToSample(sample, event);
+              recordSampleEvent({
+                sampleRowId: sample.id,
+                sampleId,
+                action: `app_${action}`,
+                details: {
+                  source: 'ios_scanner_app_import',
+                  imported_event_id: event.id || null,
+                  session_id: event.sessionID || event.session_id || null,
+                  action,
+                  box_code: event.boxCode || event.box_code || null,
+                  target_box_code: event.targetBoxCode || event.target_box_code || null,
+                  position: event.position || null,
+                  operator: event.operatorName || event.operator || null,
+                  experiment_label: event.experimentLabel || event.experiment_label || null,
+                  scanned_order: event.scannedOrder || event.scanned_order || null,
+                  created_at: event.createdAt || event.created_at || null,
+                },
+              });
+              applied++;
+            } catch (err) {
+              console.error('Failed to apply scan event', event, err);
+              otherErrors++;
+            }
+          });
+        });
+      } catch (err) {
+        console.error('Scan events import failed, rolling back.', err);
+        alert('导入过程中出现错误，已回滚。请检查控制台错误信息。');
+        return;
+      }
+
+      if (applied > 0 && typeof makeDbDirty === 'function') makeDbDirty();
+      if (typeof refreshAllViews === 'function') refreshAllViews();
+
+      let summary = `Scan events 导入完成：\n成功应用 ${applied} 条事件。`;
+      if (skippedMissingSample > 0) summary += `\n跳过 ${skippedMissingSample} 条（sample_id 不存在）。`;
+      if (skippedInvalid > 0) summary += `\n跳过 ${skippedInvalid} 条（缺少 sample_id 或 action）。`;
+      if (otherErrors > 0) summary += `\n失败 ${otherErrors} 条（详见控制台）。`;
+      alert(summary);
+    };
+
+    reader.readAsText(file);
+  });
+}
+
+function normalizeScanEventsPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.events)) return payload.events;
+  return [];
+}
+
+function buildScanEventsPrecheck(events) {
+  const sampleIds = events
+    .map(event => cellToString(event.sampleID || event.sample_id))
+    .filter(Boolean);
+  const uniqueSampleIds = Array.from(new Set(sampleIds));
+  const existingIds = new Set(
+    queryAll('SELECT sample_id FROM samples;')
+      .map(row => row.sample_id)
+      .filter(Boolean)
+  );
+
+  const missing = uniqueSampleIds.filter(sampleId => !existingIds.has(sampleId));
+  const actionCounts = {};
+  events.forEach(event => {
+    const action = cellToString(event.action) || '(missing)';
+    actionCounts[action] = (actionCounts[action] || 0) + 1;
+  });
+
+  return {
+    total: events.length,
+    uniqueSamples: uniqueSampleIds.length,
+    missing,
+    actionCounts,
+  };
+}
+
+function formatScanEventsPrecheck(result) {
+  const lines = [
+    'Scan events 导入预检：',
+    `事件数：${result.total}`,
+    `涉及样本数：${result.uniqueSamples}`,
+  ];
+
+  lines.push('');
+  lines.push('Action 统计：');
+  Object.entries(result.actionCounts).forEach(([action, count]) => {
+    lines.push(`- ${action}: ${count}`);
+  });
+
+  if (result.missing.length > 0) {
+    lines.push('');
+    lines.push(`将跳过不存在的 sample_id：${result.missing.length} 个`);
+    lines.push(result.missing.slice(0, 12).join(', '));
+    if (result.missing.length > 12) lines.push('...');
+  }
+
+  lines.push('');
+  lines.push('导入会更新样本状态/盒位，并写入 Audit Log。确认继续吗？');
+  return lines.join('\n');
+}
+
+function ensureScanEventImportSchema() {
+  try {
+    appState.db.run(`ALTER TABLE boxes ADD COLUMN box_code TEXT;`);
+  } catch (e) {
+    // Column already exists.
+  }
+
+  try {
+    appState.db.run(`ALTER TABLE samples ADD COLUMN box_position TEXT;`);
+  } catch (e) {
+    // Column already exists.
+  }
+
+  appState.db.run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_boxes_box_code
+    ON boxes(box_code)
+    WHERE box_code IS NOT NULL AND TRIM(box_code) != '';
+  `);
+}
+
+function applyScanEventToSample(sample, event) {
+  const action = cellToString(event.action);
+  const position = normalizePosition(event.position);
+  const boxCode = cleanBoxCode(event.boxCode || event.box_code);
+  const targetBoxCode = cleanBoxCode(event.targetBoxCode || event.target_box_code);
+
+  if (action === 'putaway' || action === 'return') {
+    const boxId = findOrCreateBoxByCode(boxCode);
+    runSql(
+      `UPDATE samples
+       SET box_id = COALESCE(?, box_id),
+           box_position = COALESCE(?, box_position),
+           status = 'available',
+           updated_at = datetime('now')
+       WHERE id = ?;`,
+      [boxId, position || null, sample.id]
+    );
+    return;
+  }
+
+  if (action === 'transfer') {
+    const boxId = findOrCreateBoxByCode(targetBoxCode || boxCode);
+    runSql(
+      `UPDATE samples
+       SET box_id = COALESCE(?, box_id),
+           box_position = COALESCE(?, box_position),
+           updated_at = datetime('now')
+       WHERE id = ?;`,
+      [boxId, position || null, sample.id]
+    );
+    return;
+  }
+
+  if (action === 'pickup') {
+    runSql(
+      `UPDATE samples
+       SET status = 'checked_out',
+           updated_at = datetime('now')
+       WHERE id = ?;`,
+      [sample.id]
+    );
+    return;
+  }
+
+  if (action === 'consume') {
+    runSql(
+      `UPDATE samples
+       SET status = 'retired',
+           updated_at = datetime('now')
+       WHERE id = ?;`,
+      [sample.id]
+    );
+    return;
+  }
+
+  if (action === 'inventory') {
+    runSql(
+      `UPDATE samples
+       SET updated_at = datetime('now')
+       WHERE id = ?;`,
+      [sample.id]
+    );
+  }
+}
+
+function findOrCreateBoxByCode(rawCode) {
+  const code = cleanBoxCode(rawCode);
+  if (!code) return null;
+
+  const existing = queryAll(
+    `SELECT id FROM boxes
+     WHERE box_code = ? OR box_label = ?
+     LIMIT 1;`,
+    [code, code]
+  )[0];
+  if (existing?.id) return existing.id;
+
+  const id = getOrCreateBoxId({
+    storage_temperature: '',
+    freezer_no: '',
+    rack: '',
+    box_label: code,
+  });
+  if (id) {
+    runSql('UPDATE boxes SET box_code = ? WHERE id = ?;', [code, id]);
+  }
+  return id;
+}
+
+function cleanBoxCode(value) {
+  return cellToString(value)
+    .replace(/^box:/i, '')
+    .trim();
+}
+
+function normalizePosition(value) {
+  const normalized = cellToString(value).toUpperCase().replace(/\s+/g, '');
+  return normalized || null;
 }
 
 function buildImportPrecheck(rows) {
